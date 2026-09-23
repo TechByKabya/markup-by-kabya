@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import path from 'node:path';
+import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { createBridgeServer } from '../src/server/index.js';
 import { createMcpServer } from '../src/mcp/server.js';
@@ -49,8 +50,6 @@ async function main() {
   const options = parseArgs();
 
   if (command === 'uninstall' || command === 'remove') {
-    const fs = await import('node:fs');
-    const path = await import('node:path');
     const mcpConfigPath = path.resolve(process.cwd(), '.agents', 'mcp_config.json');
 
     if (fs.existsSync(mcpConfigPath)) {
@@ -69,58 +68,23 @@ async function main() {
   }
 
   if (command === 'check') {
-    let pending = [];
-
-    // 1. Try querying running HTTP daemon on 127.0.0.1:3005 first
-    try {
-      const res = await fetch('http://127.0.0.1:3005/api/feedback?status=pending');
-      if (res.ok) {
-        const data = await res.json();
-        pending = data.items || [];
-      }
-    } catch (_) {}
-
-    // 2. Fallback to local queue file if daemon unreachable
-    if (pending.length === 0) {
-      try {
-        const fs = await import('node:fs');
-        const path = await import('node:path');
-        const queueFile = path.resolve(process.cwd(), '.antigravity/ui_feedback_queue.json');
-        if (fs.existsSync(queueFile)) {
-          const raw = fs.readFileSync(queueFile, 'utf8');
-          const items = JSON.parse(raw);
-          pending = Array.isArray(items) ? items.filter(i => i.status === 'pending') : [];
-        }
-      } catch (_) {}
-    }
-
-    try {
-      if (pending.length > 0) {
-          const summary = pending.map((p, idx) => {
-            let targetFile = '';
-            if (p.reactContext?.source?.file) {
-              targetFile = p.reactContext.source.file;
-            } else if (p.url && p.url.startsWith('file://')) {
-              try { targetFile = new URL(p.url).pathname; } catch (_) {}
-            }
-            return `### Feedback Item [${idx + 1}] (ID: ${p.id})
-- **User Requested Change**: "${p.userNotes}"
-- **Target Selector**: \`${p.selector}\`
-${targetFile ? `- **Target File**: \`${targetFile}\`` : ''}
-${p.outerHTML ? `- **HTML Element to Edit**:\n\`\`\`html\n${p.outerHTML.slice(0, 300)}\n\`\`\`` : ''}`;
-          }).join('\n\n---\n\n');
-
-          console.log(JSON.stringify({
-            injectSteps: [
-              {
-                ephemeralMessage: `📢 PENDING UI FEEDBACK from Browser:\n\n${summary}\n\nPlease open the target file above and apply the requested change directly.`
-              }
-            ]
-          }));
-          process.exit(0);
-        }
-      } catch (_) {}
-    console.log(JSON.stringify({ injectSteps: [] }));
+    // Delegate to check-pending.js which handles:
+    //   - Fresh items (submitted < 90s ago) → autoMessage (agent auto-executes)
+    //   - Stale items → ephemeralMessage reminder
+    //   - Pre-built actionCommand so agent needs 0 extra MCP tool calls
+    const { spawnSync } = await import('node:child_process');
+    const checkScript = path.resolve(__dirname, 'check-pending.js');
+    const result = spawnSync(process.execPath, [checkScript], {
+      env: {
+        ...process.env,
+        BRIDGE_API_BASE: process.env.BRIDGE_API_BASE || 'http://127.0.0.1:3005',
+        MARKUP_BRIDGE_STORAGE: process.env.MARKUP_BRIDGE_STORAGE || path.resolve(process.cwd(), '.antigravity')
+      },
+      encoding: 'utf8',
+      timeout: 5000
+    });
+    if (result.stdout) process.stdout.write(result.stdout);
+    else console.log(JSON.stringify({ injectSteps: [] }));
     return;
   }
 
@@ -140,8 +104,6 @@ ${p.outerHTML ? `- **HTML Element to Edit**:\n\`\`\`html\n${p.outerHTML.slice(0,
 
   // DEFAULT BEHAVIOR: npx markup-bridge
   // 1. Setup the background config so it auto-starts in this project
-  const fs = await import('node:fs');
-  const path = await import('node:path');
   const agentsDir = path.resolve(process.cwd(), '.agents');
   if (!fs.existsSync(agentsDir)) fs.mkdirSync(agentsDir, { recursive: true });
 
