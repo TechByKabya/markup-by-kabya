@@ -69,15 +69,33 @@ async function main() {
   }
 
   if (command === 'check') {
-    const fs = await import('node:fs');
-    const path = await import('node:path');
-    const queueFile = path.resolve(process.cwd(), '.antigravity/ui_feedback_queue.json');
+    let pending = [];
+
+    // 1. Try querying running HTTP daemon on 127.0.0.1:3005 first
     try {
-      if (fs.existsSync(queueFile)) {
-        const raw = fs.readFileSync(queueFile, 'utf8');
-        const items = JSON.parse(raw);
-        const pending = Array.isArray(items) ? items.filter(i => i.status === 'pending') : [];
-        if (pending.length > 0) {
+      const res = await fetch('http://127.0.0.1:3005/api/feedback?status=pending');
+      if (res.ok) {
+        const data = await res.json();
+        pending = data.items || [];
+      }
+    } catch (_) {}
+
+    // 2. Fallback to local queue file if daemon unreachable
+    if (pending.length === 0) {
+      try {
+        const fs = await import('node:fs');
+        const path = await import('node:path');
+        const queueFile = path.resolve(process.cwd(), '.antigravity/ui_feedback_queue.json');
+        if (fs.existsSync(queueFile)) {
+          const raw = fs.readFileSync(queueFile, 'utf8');
+          const items = JSON.parse(raw);
+          pending = Array.isArray(items) ? items.filter(i => i.status === 'pending') : [];
+        }
+      } catch (_) {}
+    }
+
+    try {
+      if (pending.length > 0) {
           const summary = pending.map((p, idx) => {
             let targetFile = '';
             if (p.reactContext?.source?.file) {
@@ -101,8 +119,7 @@ ${p.outerHTML ? `- **HTML Element to Edit**:\n\`\`\`html\n${p.outerHTML.slice(0,
           }));
           process.exit(0);
         }
-      }
-    } catch (_) {}
+      } catch (_) {}
     console.log(JSON.stringify({ injectSteps: [] }));
     return;
   }

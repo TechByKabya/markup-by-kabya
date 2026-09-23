@@ -51,9 +51,22 @@ export function createMcpServer({
         .describe('Maximum number of items to return. Defaults to 20.')
     },
     async ({ status = 'pending', limit = 20 }) => {
-      // Reload queue from disk in case updated by web client
-      queue.init();
-      const items = queue.listFeedback({ status, limit });
+      let items = [];
+
+      // 1. Try querying running HTTP bridge server first (handles multi-directory setups)
+      try {
+        const res = await fetch(`${BRIDGE_API_BASE}/api/feedback?status=${encodeURIComponent(status)}&limit=${limit}`);
+        if (res.ok) {
+          const data = await res.json();
+          items = data.items || [];
+        }
+      } catch (_) {}
+
+      // 2. Fallback to direct queue on disk if bridge HTTP unreachable
+      if (items.length === 0) {
+        queue.init();
+        items = queue.listFeedback({ status, limit });
+      }
 
       if (items.length === 0) {
         return {
@@ -104,8 +117,21 @@ export function createMcpServer({
       id: z.string().describe('The feedback ID (e.g. fb_1774330623123_a8b9)')
     },
     async ({ id }) => {
-      queue.init();
-      const item = queue.getFeedback(id);
+      let item = null;
+
+      // 1. Try querying running HTTP bridge server first
+      try {
+        const res = await fetch(`${BRIDGE_API_BASE}/api/feedback/${encodeURIComponent(id)}`);
+        if (res.ok) {
+          item = await res.json();
+        }
+      } catch (_) {}
+
+      // 2. Fallback to direct queue on disk if bridge HTTP unreachable
+      if (!item) {
+        queue.init();
+        item = queue.getFeedback(id);
+      }
 
       if (!item) {
         return {
