@@ -7,20 +7,26 @@ import { FeedbackQueue } from '../server/queue.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const ROOT_DIR = path.resolve(__dirname, '../../');
+
+// Storage dir resolution priority:
+//   1. MARKUP_BRIDGE_STORAGE env var (explicit, cross-project safe)
+//   2. CWD/.antigravity (default, works when CWD = project root)
+const STORAGE_DIR = process.env.MARKUP_BRIDGE_STORAGE
+  || path.resolve(process.cwd(), '.antigravity');
+
 const BRIDGE_API_BASE = process.env.BRIDGE_API_BASE || 'http://127.0.0.1:3005';
 
 export function createMcpServer({
-  storageDir = path.resolve(process.cwd(), '.antigravity')
+  storageDir = STORAGE_DIR
 } = {}) {
   const queue = new FeedbackQueue(storageDir);
 
   const server = new McpServer({
     name: 'antigravity-ui-bridge',
-    version: '1.0.0'
+    version: '2.0.0'
   });
 
-  // Helper to sync update with running HTTP bridge server for SSE broadcast
+  // Helper: sync update with running HTTP bridge server for SSE broadcast
   async function notifyBridgeServer(id, updates) {
     try {
       const res = await fetch(`${BRIDGE_API_BASE}/api/feedback/${encodeURIComponent(id)}`, {
@@ -32,12 +38,91 @@ export function createMcpServer({
         return await res.json();
       }
     } catch (_) {
-      // Bridge server might not be running or unreachable; fallback to direct queue update
+      // Bridge server might not be running; fallback to direct queue update
     }
     return queue.updateFeedback(id, updates);
   }
 
-  // 1. Tool: list_ui_feedback
+  // Helper: fetch from bridge server with queue fallback
+  async function fetchFeedback(id) {
+    try {
+      const res = await fetch(`${BRIDGE_API_BASE}/api/feedback/${encodeURIComponent(id)}`);
+      if (res.ok) return await res.json();
+    } catch (_) {}
+    queue.init();
+    return queue.getFeedback(id);
+  }
+
+  async function fetchFeedbackList({ status, limit }) {
+    try {
+      const res = await fetch(`${BRIDGE_API_BASE}/api/feedback?status=${encodeURIComponent(status)}&limit=${limit}`);
+      if (res.ok) {
+        const data = await res.json();
+        return data.items || [];
+      }
+    } catch (_) {}
+    queue.init();
+    return queue.listFeedback({ status, limit });
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // Tool 1: get_action_command — NEW lightweight tool
+  //
+  // Returns pre-digested action command strings for pending feedback.
+  // Use this FIRST before get_ui_feedback — it gives everything needed for
+  // simple style/copy/layout changes in a single compact call.
+  // ─────────────────────────────────────────────────────────────────────────────
+  server.tool(
+    'get_action_command',
+    {
+      limit: z
+        .number()
+        .optional()
+        .describe('Max number of pending items to return. Defaults to 5.')
+    },
+    async ({ limit = 5 }) => {
+      let commands = [];
+
+      try {
+        const res = await fetch(`${BRIDGE_API_BASE}/api/feedback/action-queue?fresh=false&limit=${limit}`);
+        if (res.ok) {
+          const data = await res.json();
+          commands = data.commands || [];
+        }
+      } catch (_) {}
+
+      if (commands.length === 0) {
+        queue.init();
+        const pending = queue.listFeedback({ status: 'pending', limit });
+        commands = pending.map(item => ({
+          id: item.id,
+          timestamp: item.timestamp,
+          actionCommand: item.actionCommand || queue.generateActionCommand(item)
+        }));
+      }
+
+      if (commands.length === 0) {
+        return {
+          content: [{ type: 'text', text: 'No pending UI feedback items in queue.' }]
+        };
+      }
+
+      const text = commands.map((c, i) =>
+        `### Action [${i + 1}] — ID: \`${c.id}\`\n${c.actionCommand}`
+      ).join('\n\n---\n\n');
+
+      return {
+        content: [{
+          type: 'text',
+          text: `${commands.length} pending UI change(s) to execute:\n\n${text}`
+        }]
+      };
+    }
+  );
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // Tool 2: list_ui_feedback
+  // ─────────────────────────────────────────────────────────────────────────────
   server.tool(
     'list_ui_feedback',
     {
@@ -51,31 +136,11 @@ export function createMcpServer({
         .describe('Maximum number of items to return. Defaults to 20.')
     },
     async ({ status = 'pending', limit = 20 }) => {
-      let items = [];
-
-      // 1. Try querying running HTTP bridge server first (handles multi-directory setups)
-      try {
-        const res = await fetch(`${BRIDGE_API_BASE}/api/feedback?status=${encodeURIComponent(status)}&limit=${limit}`);
-        if (res.ok) {
-          const data = await res.json();
-          items = data.items || [];
-        }
-      } catch (_) {}
-
-      // 2. Fallback to direct queue on disk if bridge HTTP unreachable
-      if (items.length === 0) {
-        queue.init();
-        items = queue.listFeedback({ status, limit });
-      }
+      const items = await fetchFeedbackList({ status, limit });
 
       if (items.length === 0) {
         return {
-          content: [
-            {
-              type: 'text',
-              text: `No UI feedback items found with status="${status}".`
-            }
-          ]
+          content: [{ type: 'text', text: `No UI feedback items found with status="${status}".` }]
         };
       }
 
@@ -85,68 +150,57 @@ export function createMcpServer({
           ? ` (${item.reactContext.source.file}:${item.reactContext.source.line})`
           : '';
         if (!src && item.url && item.url.startsWith('file://')) {
-          try {
-            src = ` (${new URL(item.url).pathname})`;
-          } catch (_) {}
+          try { src = ` (${new URL(item.url).pathname})`; } catch (_) {}
         }
+        // Include pre-digested action command for quick scanning
+        const cmd = item.actionCommand ? `\n**Quick Action**: ${item.actionCommand.split('\n')[0]}` : '';
         return `### [${idx + 1}] Feedback ID: \`${item.id}\`
 - **Status**: ${item.status.toUpperCase()} (${item.tag || 'general'})
-- **Target Component**: \`${comp}\`${src}
+- **Target**: \`${comp}\`${src}
 - **CSS Selector**: \`${item.selector}\`
-- **User Requested Changes**:
-> ${item.userNotes || 'No notes provided'}
-- **Created**: ${item.timestamp}
-- **Page URL**: ${item.url || 'N/A'}`;
+- **User Notes**: ${item.userNotes || 'No notes provided'}
+- **Created**: ${item.timestamp}${cmd}`;
       }).join('\n\n---\n\n');
 
       return {
-        content: [
-          {
-            type: 'text',
-            text: `Found ${items.length} feedback item(s):\n\n${formatted}`
-          }
-        ]
+        content: [{ type: 'text', text: `Found ${items.length} feedback item(s):\n\n${formatted}` }]
       };
     }
   );
 
-  // 2. Tool: get_ui_feedback
+  // ─────────────────────────────────────────────────────────────────────────────
+  // Tool 3: get_ui_feedback — enriched with opt-in computed styles
+  //
+  // IMPORTANT CHANGE: computed styles are now OPTIONAL (opt-in via includeStyles).
+  // This eliminates the 800-token CSS property dump for simple changes.
+  // Only request includeStyles: true when you genuinely need to inspect layout/color.
+  // ─────────────────────────────────────────────────────────────────────────────
   server.tool(
     'get_ui_feedback',
     {
-      id: z.string().describe('The feedback ID (e.g. fb_1774330623123_a8b9)')
+      id: z.string().describe('The feedback ID (e.g. fb_1774330623123_a8b9)'),
+      includeStyles: z
+        .boolean()
+        .optional()
+        .describe('Set true to include computed CSS styles table. Omit for simple changes — saves tokens.')
     },
-    async ({ id }) => {
-      let item = null;
-
-      // 1. Try querying running HTTP bridge server first
-      try {
-        const res = await fetch(`${BRIDGE_API_BASE}/api/feedback/${encodeURIComponent(id)}`);
-        if (res.ok) {
-          item = await res.json();
-        }
-      } catch (_) {}
-
-      // 2. Fallback to direct queue on disk if bridge HTTP unreachable
-      if (!item) {
-        queue.init();
-        item = queue.getFeedback(id);
-      }
+    async ({ id, includeStyles = false }) => {
+      const item = await fetchFeedback(id);
 
       if (!item) {
         return {
-          content: [
-            {
-              type: 'text',
-              text: `Error: UI feedback item with ID "${id}" was not found.`
-            }
-          ]
+          content: [{ type: 'text', text: `Error: UI feedback item with ID "${id}" was not found.` }]
         };
       }
 
-      let details = `# UI Visual Feedback Item: ${item.id}\n\n`;
+      // Start with the pre-digested action command (always included)
+      let details = `# UI Feedback: ${item.id}\n\n`;
+      details += `## ⚡ Action Command (Pre-Digested)\n`;
+      details += `\`\`\`\n${item.actionCommand || queue.generateActionCommand(item)}\n\`\`\`\n\n`;
+
+      details += `## Context\n`;
       details += `- **Status**: ${item.status}\n`;
-      details += `- **Tag / Category**: ${item.tag}\n`;
+      details += `- **Tag**: ${item.tag}\n`;
       details += `- **Page URL**: ${item.url}\n`;
       details += `- **Timestamp**: ${item.timestamp}\n\n`;
 
@@ -154,62 +208,54 @@ export function createMcpServer({
         try {
           const directFile = new URL(item.url).pathname;
           details += `## 🎯 Direct File Location\n`;
-          details += `- **Exact File Path on Disk**: \`${directFile}\`\n\n`;
+          details += `- **File on Disk**: \`${directFile}\`\n\n`;
         } catch (_) {}
       }
 
-      details += `## 📝 User Requested Notes\n`;
+      details += `## 📝 User Notes\n`;
       details += `> ${item.userNotes || 'None'}\n\n`;
 
       if (item.reactContext) {
-        details += `## ⚛️ React Component Context\n`;
-        details += `- **Component Name**: \`${item.reactContext.componentName}\`\n`;
-        if (item.reactContext.source && item.reactContext.source.file) {
-          details += `- **Source File**: \`${item.reactContext.source.file}\`\n`;
-          details += `- **Line**: \`${item.reactContext.source.line}\`, **Column**: \`${item.reactContext.source.column}\`\n`;
+        details += `## ⚛️ React Component\n`;
+        details += `- **Component**: \`${item.reactContext.componentName}\`\n`;
+        if (item.reactContext.source?.file) {
+          details += `- **Source**: \`${item.reactContext.source.file}:${item.reactContext.source.line}\`\n`;
         }
-        if (item.reactContext.hierarchy && item.reactContext.hierarchy.length > 0) {
-          details += `- **Component Hierarchy**: ${item.reactContext.hierarchy.join(' > ')}\n`;
+        if (item.reactContext.hierarchy?.length > 0) {
+          details += `- **Hierarchy**: ${item.reactContext.hierarchy.join(' > ')}\n`;
         }
-        if (item.reactContext.props) {
-          details += `- **Props Summary**: \`\`\`json\n${JSON.stringify(item.reactContext.props, null, 2)}\n\`\`\`\n`;
-        }
-        details += `\n`;
+        details += '\n';
       }
 
-      details += `## 🎯 DOM & Selector\n`;
+      details += `## 🎯 DOM Selector\n`;
       details += `- **CSS Selector**: \`${item.selector}\`\n`;
-      details += `- **Outer HTML Snippet** (sanitized, <= 400 chars):\n\`\`\`html\n${item.outerHTML}\n\`\`\`\n\n`;
+      details += `- **HTML Snippet**:\n\`\`\`html\n${item.outerHTML}\n\`\`\`\n\n`;
 
-      if (item.computedStyles && Object.keys(item.computedStyles).length > 0) {
-        details += `## 🎨 Critical Computed Styles\n`;
+      // Computed styles are OPT-IN — skipped by default to save tokens
+      if (includeStyles && item.computedStyles && Object.keys(item.computedStyles).length > 0) {
+        details += `## 🎨 Computed Styles\n`;
         details += `| Property | Value |\n|---|---|\n`;
         for (const [prop, val] of Object.entries(item.computedStyles)) {
           if (val !== undefined) {
             details += `| \`${prop}\` | \`${val}\` |\n`;
           }
         }
-        details += `\n`;
+        details += '\n';
+      } else if (!includeStyles) {
+        details += `> 💡 Computed styles omitted (add \`includeStyles: true\` to see them).\n\n`;
       }
 
       if (item.areaMarking) {
-        details += `## 📍 Freeform Area / Spatial Marking\n`;
+        details += `## 📍 Freeform Area Marking\n`;
         details += `- **Shape**: \`${item.areaMarking.shape.toUpperCase()}\`\n`;
-        details += `- **Dimensions & Position**: \`X: ${item.areaMarking.rect.x}px, Y: ${item.areaMarking.rect.y}px, Width: ${item.areaMarking.rect.width}px, Height: ${item.areaMarking.rect.height}px\`\n`;
+        details += `- **Dimensions**: X:${item.areaMarking.rect.x}px Y:${item.areaMarking.rect.y}px W:${item.areaMarking.rect.width}px H:${item.areaMarking.rect.height}px\n`;
         if (item.areaMarking.containerSelector) {
-          details += `- **Nearest Container Element**: \`${item.areaMarking.containerSelector}\`\n`;
+          details += `- **Container**: \`${item.areaMarking.containerSelector}\`\n`;
         }
         if (item.areaMarking.relativePosition) {
-          details += `- **Spatial Placement Hint**: ${item.areaMarking.relativePosition}\n`;
+          details += `- **Placement Hint**: ${item.areaMarking.relativePosition}\n`;
         }
-        details += `\n`;
-      }
-
-      if (item.screenshotSnippet) {
-        details += `## 📸 Visual Bounding Rect\n`;
-        if (item.screenshotSnippet.rect) {
-          details += `- Coordinates: \`x: ${item.screenshotSnippet.rect.x}, y: ${item.screenshotSnippet.rect.y}, w: ${item.screenshotSnippet.rect.width}px, h: ${item.screenshotSnippet.rect.height}px\`\n`;
-        }
+        details += '\n';
       }
 
       if (item.resolutionNotes) {
@@ -219,48 +265,45 @@ export function createMcpServer({
       }
 
       return {
-        content: [
-          {
-            type: 'text',
-            text: details
-          }
-        ]
+        content: [{ type: 'text', text: details }]
       };
     }
   );
 
-  // 3. Tool: get_latest_ui_feedback
+  // ─────────────────────────────────────────────────────────────────────────────
+  // Tool 4: get_latest_ui_feedback
+  // ─────────────────────────────────────────────────────────────────────────────
   server.tool('get_latest_ui_feedback', {}, async () => {
     queue.init();
     const item = queue.getLatestPending();
 
     if (!item) {
       return {
-        content: [
-          {
-            type: 'text',
-            text: 'No pending UI feedback items currently in queue.'
-          }
-        ]
+        content: [{ type: 'text', text: 'No pending UI feedback items currently in queue.' }]
       };
     }
 
     const comp = item.reactContext?.componentName || item.selector;
     return {
-      content: [
-        {
-          type: 'text',
-          text: `### Latest Pending Feedback: \`${item.id}\`
+      content: [{
+        type: 'text',
+        text: `### Latest Pending Feedback: \`${item.id}\`
 - **Target**: \`${comp}\`
 - **User Notes**: ${item.userNotes}
 - **Selector**: \`${item.selector}\`
-- **Source**: ${item.reactContext?.source ? `${item.reactContext.source.file}:${item.reactContext.source.line}` : 'N/A'}`
-        }
-      ]
+- **Source**: ${item.reactContext?.source ? `${item.reactContext.source.file}:${item.reactContext.source.line}` : 'N/A'}
+
+**Action Command**:
+\`\`\`
+${item.actionCommand || queue.generateActionCommand(item)}
+\`\`\``
+      }]
     };
   });
 
-  // 4. Tool: resolve_ui_feedback
+  // ─────────────────────────────────────────────────────────────────────────────
+  // Tool 5: resolve_ui_feedback
+  // ─────────────────────────────────────────────────────────────────────────────
   server.tool(
     'resolve_ui_feedback',
     {
@@ -278,34 +321,29 @@ export function createMcpServer({
       const existing = queue.getFeedback(id);
       if (!existing) {
         return {
-          content: [
-            {
-              type: 'text',
-              text: `Error: Feedback item with ID "${id}" was not found.`
-            }
-          ]
+          content: [{
+            type: 'text',
+            text: `Error: Feedback item with ID "${id}" was not found.`
+          }]
         };
       }
 
-      const updated = await notifyBridgeServer(id, {
-        status,
-        resolutionNotes
-      });
+      await notifyBridgeServer(id, { status, resolutionNotes });
 
       return {
-        content: [
-          {
-            type: 'text',
-            text: `✅ Feedback \`${id}\` marked as **${status.toUpperCase()}**!
-- **Resolution Summary**: ${resolutionNotes}
-- **Client Notification**: Dispatched real-time SSE event to active browser sessions.`
-          }
-        ]
+        content: [{
+          type: 'text',
+          text: `✅ Feedback \`${id}\` marked as **${status.toUpperCase()}**!
+- **Resolution**: ${resolutionNotes}
+- **Browser Notification**: Real-time SSE event dispatched — marker turns green in the browser.`
+        }]
       };
     }
   );
 
-  // 5. Tool: clear_ui_feedback
+  // ─────────────────────────────────────────────────────────────────────────────
+  // Tool 6: clear_ui_feedback
+  // ─────────────────────────────────────────────────────────────────────────────
   server.tool(
     'clear_ui_feedback',
     {
@@ -318,51 +356,37 @@ export function createMcpServer({
       queue.init();
       queue.clearQueue({ status });
       return {
-        content: [
-          {
-            type: 'text',
-            text: `Cleared items with status="${status}" from the UI feedback queue.`
-          }
-        ]
+        content: [{
+          type: 'text',
+          text: `Cleared items with status="${status}" from the UI feedback queue.`
+        }]
       };
     }
   );
 
   // MCP Resources
-  server.resource(
-    'ui-feedback-queue',
-    'feedback://queue',
-    async (uri) => {
-      queue.init();
-      return {
-        contents: [
-          {
-            uri: uri.href,
-            text: JSON.stringify(queue.items, null, 2),
-            mimeType: 'application/json'
-          }
-        ]
-      };
-    }
-  );
+  server.resource('ui-feedback-queue', 'feedback://queue', async (uri) => {
+    queue.init();
+    return {
+      contents: [{
+        uri: uri.href,
+        text: JSON.stringify(queue.items, null, 2),
+        mimeType: 'application/json'
+      }]
+    };
+  });
 
-  server.resource(
-    'ui-feedback-latest',
-    'feedback://latest',
-    async (uri) => {
-      queue.init();
-      const latest = queue.getLatestPending();
-      return {
-        contents: [
-          {
-            uri: uri.href,
-            text: JSON.stringify(latest || null, null, 2),
-            mimeType: 'application/json'
-          }
-        ]
-      };
-    }
-  );
+  server.resource('ui-feedback-latest', 'feedback://latest', async (uri) => {
+    queue.init();
+    const latest = queue.getLatestPending();
+    return {
+      contents: [{
+        uri: uri.href,
+        text: JSON.stringify(latest || null, null, 2),
+        mimeType: 'application/json'
+      }]
+    };
+  });
 
   return {
     server,

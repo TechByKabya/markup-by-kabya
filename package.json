@@ -1,7 +1,7 @@
 {
   "name": "markup-bridge",
-  "version": "1.0.6",
-  "description": "Bidirectional UI Visual Feedback Bridge for Antigravity via MCP",
+  "version": "2.0.0",
+  "description": "Zero-touch bidirectional UI Visual Feedback Bridge for Antigravity via MCP — auto-executes browser UI changes with no manual prompting",
   "main": "src/server/index.js",
   "exports": {
     ".": "./src/server/index.js",
@@ -11,7 +11,7 @@
   },
   "type": "module",
   "bin": {
-    "markup-bridge": "./bin/markup-bridge.js"
+    "markup-bridge": "bin/markup-bridge.js"
   },
   "scripts": {
     "start": "node bin/markup-bridge.js dual",

@@ -157,7 +157,10 @@ ${p.outerHTML ? `- **HTML Element to Edit**:\n\`\`\`html\n${p.outerHTML.slice(0,
   mcpConfig.mcpServers["markup-bridge"] = {
     "command": "npx",
     "args": ["-y", "markup-bridge", "mcp"],
-    "env": { "BRIDGE_API_BASE": "http://127.0.0.1:3005" }
+    "env": {
+      "BRIDGE_API_BASE": "http://127.0.0.1:3005",
+      "MARKUP_BRIDGE_STORAGE": path.resolve(process.cwd(), '.antigravity')
+    }
   };
   fs.writeFileSync(mcpConfigPath, JSON.stringify(mcpConfig, null, 2));
 
@@ -169,7 +172,7 @@ ${p.outerHTML ? `- **HTML Element to Edit**:\n\`\`\`html\n${p.outerHTML.slice(0,
       hooksConfig = JSON.parse(fs.readFileSync(hooksConfigPath, 'utf8'));
     } catch (e) {}
   }
-  hooksConfig["markup-bridge-notifier"] = {
+  hooksConfig["markup-bridge-auto-executor"] = {
     "PreInvocation": [
       {
         "type": "command",
@@ -178,6 +181,8 @@ ${p.outerHTML ? `- **HTML Element to Edit**:\n\`\`\`html\n${p.outerHTML.slice(0,
       }
     ]
   };
+  // Remove old hook key if present (cleanup)
+  delete hooksConfig["markup-bridge-notifier"];
   fs.writeFileSync(hooksConfigPath, JSON.stringify(hooksConfig, null, 2));
 
   // 1c. Configure Agent Skill
@@ -186,16 +191,36 @@ ${p.outerHTML ? `- **HTML Element to Edit**:\n\`\`\`html\n${p.outerHTML.slice(0,
   const skillFile = path.join(skillDir, 'SKILL.md');
   const skillContent = `---
 name: markup-bridge
-description: Autonomous pair programming workflow for inspecting and addressing UI visual feedback submitted live from the web browser via Markup Bridge MCP.
+description: Zero-tool-call autonomous workflow for UI visual feedback from the browser. When fresh feedback arrives via autoMessage, act immediately using the pre-built ActionCommand — no extra MCP calls needed.
 ---
 
-# Markup Bridge: Visual UI Feedback Workflow
+# Markup Bridge: Autonomous UI Feedback Workflow (v2)
 
-Use this skill whenever pending UI feedback is detected from the browser:
-1. Call \`list_ui_feedback({ status: 'pending' })\` to see pending feedback items.
-2. Call \`get_ui_feedback({ id })\` to inspect the targeted element, component, and user requested notes.
-3. Edit the code to implement the requested UI changes.
-4. Call \`resolve_ui_feedback({ id, resolutionNotes })\` to notify the browser and turn the marker green.
+## When autoMessage fires with \'🎯 New UI feedback from browser\':
+
+### Case 1: ActionCommand has a File path (most common)
+1. Open the file at the specified path/line
+2. Apply the change described in the Action Command
+3. Call \`resolve_ui_feedback({ id, resolutionNotes: "brief summary" })\`
+
+Do NOT call \`list_ui_feedback\` or \`get_ui_feedback\` — the ActionCommand has everything.
+
+### Case 2: No File path in ActionCommand
+1. Use the CSS Selector to grep the codebase for the matching file
+2. Apply the change
+3. Call \`resolve_ui_feedback\`
+
+### Case 3: Freeform Area Marking (Rectangle/Circle/Pin)
+1. Call \`get_ui_feedback({ id })\` for spatial context
+2. Insert the new component at the specified container + position
+3. Call \`resolve_ui_feedback\`
+
+## MCP Tools (only when needed)
+- \`get_action_command\` — scan pending items without heavy data
+- \`get_ui_feedback({ id, includeStyles: false })\` — deep context, no CSS dump
+- \`get_ui_feedback({ id, includeStyles: true })\` — include computed styles
+- \`resolve_ui_feedback({ id, resolutionNotes, status })\` — mark done, notify browser
+- \`list_ui_feedback\` — browse all pending items
 `;
   fs.writeFileSync(skillFile, skillContent, 'utf8');
 

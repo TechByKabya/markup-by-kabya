@@ -107,6 +107,40 @@ export function createBridgeServer({
         return;
       }
 
+      // GET /api/feedback/action-queue — ultra-compact pre-digested ActionCommands
+      // Returns ONLY actionCommand strings for pending items; no heavy JSON blobs.
+      // Designed for hook/pre-invocation use: zero extra tool calls needed.
+      if (req.method === 'GET' && pathname === '/api/feedback/action-queue') {
+        const limit = parseInt(parsedUrl.searchParams.get('limit') || '5', 10);
+        const freshOnly = parsedUrl.searchParams.get('fresh') !== 'false';
+        const freshWindowMs = parseInt(parsedUrl.searchParams.get('freshWindow') || '120000', 10);
+        const now = Date.now();
+
+        let pending = queue.listFeedback({ status: 'pending', limit });
+        if (freshOnly) {
+          pending = pending.filter(item => {
+            const age = now - new Date(item.timestamp).getTime();
+            return age <= freshWindowMs;
+          });
+        }
+
+        const commands = pending.map(item => ({
+          id: item.id,
+          timestamp: item.timestamp,
+          actionCommand: item.actionCommand || queue.generateActionCommand(item)
+        }));
+
+        sendJson(res, 200, { commands, count: commands.length });
+        return;
+      }
+
+      // GET /api/feedback/pending-count — lightweight badge count
+      if (req.method === 'GET' && pathname === '/api/feedback/pending-count') {
+        const count = queue.listFeedback({ status: 'pending' }).length;
+        sendJson(res, 200, { count });
+        return;
+      }
+
       // GET /api/feedback
       if (req.method === 'GET' && pathname === '/api/feedback') {
         const status = parsedUrl.searchParams.get('status') || 'all';

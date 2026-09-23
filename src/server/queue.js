@@ -7,6 +7,9 @@ export class FeedbackQueue {
     this.storageFile = path.join(this.storageDir, 'ui_feedback_queue.json');
     this.items = [];
     this.listeners = new Set();
+    // Debounce state for async writes
+    this._persistTimer = null;
+    this._persistPromise = null;
     this.init();
   }
 
@@ -23,7 +26,7 @@ export class FeedbackQueue {
           this.items = parsed;
         }
       } else {
-        this.persist();
+        this._writeToDisk();
       }
     } catch (err) {
       console.error('[FeedbackQueue] Error initializing queue:', err.message);
@@ -31,15 +34,39 @@ export class FeedbackQueue {
     }
   }
 
-  async persist() {
-    try {
-      if (!fs.existsSync(this.storageDir)) {
-        await fs.promises.mkdir(this.storageDir, { recursive: true });
+  /**
+   * Debounced async persist — coalesces rapid writes into a single disk write.
+   * Multiple calls within 50ms will only result in one file write.
+   */
+  persist() {
+    if (this._persistTimer) clearTimeout(this._persistTimer);
+    this._persistTimer = setTimeout(() => {
+      this._persistTimer = null;
+      this._writeToDisk();
+    }, 50);
+  }
+
+  async _writeToDisk() {
+    // If a write is already in flight, chain onto it to avoid interleaving
+    const doWrite = async () => {
+      try {
+        if (!fs.existsSync(this.storageDir)) {
+          await fs.promises.mkdir(this.storageDir, { recursive: true });
+        }
+        // Write to a temp file then atomically rename to avoid partial reads
+        const tmp = this.storageFile + '.tmp';
+        await fs.promises.writeFile(tmp, JSON.stringify(this.items, null, 2), 'utf8');
+        await fs.promises.rename(tmp, this.storageFile);
+      } catch (err) {
+        console.error('[FeedbackQueue] Error writing to disk:', err.message);
       }
-      await fs.promises.writeFile(this.storageFile, JSON.stringify(this.items, null, 2), 'utf8');
-    } catch (err) {
-      console.error('[FeedbackQueue] Error writing to disk:', err.message);
-    }
+    };
+
+    this._persistPromise = this._persistPromise
+      ? this._persistPromise.then(doWrite, doWrite)
+      : doWrite();
+
+    return this._persistPromise;
   }
 
   subscribe(listener) {
@@ -68,6 +95,64 @@ export class FeedbackQueue {
     return cleaned.slice(0, 397) + '...';
   }
 
+  /**
+   * generateActionCommand — produces a compact, pre-digested single instruction
+   * string that Antigravity can act on immediately without any MCP tool calls.
+   *
+   * Format:
+   *   Change "[userNotes]" in [component] ([file:line])
+   *   Selector: [selector]
+   *   Action: Edit [file] and apply the change. Then call resolve_ui_feedback({ id: "[id]", resolutionNotes: "..." })
+   */
+  generateActionCommand(item) {
+    const lines = [];
+
+    // Human-readable change instruction
+    const change = item.userNotes
+      ? `"${item.userNotes}"`
+      : 'UI modification requested (no notes provided)';
+
+    // Component / target
+    const component = item.reactContext?.componentName || null;
+    const sourceFile = item.reactContext?.source?.file || null;
+    const sourceLine = item.reactContext?.source?.line || null;
+
+    // Derive best file path
+    let filePath = null;
+    if (sourceFile) {
+      filePath = sourceLine ? `${sourceFile}:${sourceLine}` : sourceFile;
+    } else if (item.url && item.url.startsWith('file://')) {
+      try { filePath = new URL(item.url).pathname; } catch (_) {}
+    }
+
+    // Freeform area marking metadata
+    const isAreaMarking = !!item.areaMarking;
+    const markingType = item.areaMarking?.shape;
+    const markingHint = item.areaMarking?.relativePosition;
+    const markingContainer = item.areaMarking?.containerSelector;
+
+    // Compose the action command
+    if (isAreaMarking) {
+      lines.push(`Add new content in a marked ${markingType || 'area'} region.`);
+      if (markingContainer) lines.push(`Container element: \`${markingContainer}\``);
+      if (markingHint) lines.push(`Placement: ${markingHint}`);
+      lines.push(`User request: ${change}`);
+    } else {
+      if (component) {
+        lines.push(`Change ${change} in component \`${component}\``);
+      } else {
+        lines.push(`Change ${change}`);
+      }
+    }
+
+    if (filePath) lines.push(`File: \`${filePath}\``);
+    lines.push(`Selector: \`${item.selector}\``);
+    lines.push(`Feedback ID: \`${item.id}\``);
+    lines.push(`→ Edit the file above to apply the change, then call resolve_ui_feedback({ id: "${item.id}", resolutionNotes: "..." })`);
+
+    return lines.join('\n');
+  }
+
   addFeedback(data) {
     const feedback = {
       id: this.generateId(),
@@ -85,6 +170,9 @@ export class FeedbackQueue {
       resolutionNotes: null,
       resolvedAt: null
     };
+
+    // Pre-digest into a compact action command at creation time
+    feedback.actionCommand = this.generateActionCommand(feedback);
 
     this.items.unshift(feedback);
     this.persist();

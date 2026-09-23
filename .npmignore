@@ -1,0 +1,11 @@
+# Dev artifacts
+.DS_Store
+.antigravity/
+*.tgz
+
+# Project-specific agent config (written at install time, not shipped)
+.agents/
+
+# Git
+.git/
+.gitignore

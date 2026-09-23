@@ -1,9 +1,9 @@
 {
-  "ui-feedback-notifier": {
+  "markup-bridge-auto-executor": {
     "PreInvocation": [
       {
         "type": "command",
-        "command": "./bin/check-pending.js",
+        "command": "npx -y markup-bridge check",
         "timeout": 5
       }
     ]
