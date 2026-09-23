@@ -882,7 +882,7 @@ window.__INIT_MARKUP_BRIDGE__ = function () {
           <button class="ag-btn ag-btn-secondary" id="ag-btn-reselect">Re-pick</button>
           <button class="ag-btn ag-btn-secondary" id="ag-btn-cancel">Cancel</button>
           <button class="ag-btn ag-btn-secondary" id="ag-btn-copy-prompt" title="Copy structured prompt to clipboard for Antigravity or any AI chat">
-            <span>📋 Copy Prompt</span>
+            <span>Copy Prompt</span>
           </button>
           <button class="ag-btn ag-btn-primary" id="ag-btn-submit">
             <span>Send to Antigravity</span>
