@@ -4,8 +4,8 @@
       "command": "npx",
       "args": [
         "-y",
-        "markup-by-kabya",
-        "dual"
+        "markup-bridge",
+        "mcp"
       ],
       "env": {
         "BRIDGE_API_BASE": "http://127.0.0.1:3005"

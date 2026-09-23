@@ -68,6 +68,34 @@ async function main() {
     return;
   }
 
+  if (command === 'check') {
+    const fs = await import('node:fs');
+    const path = await import('node:path');
+    const queueFile = path.resolve(process.cwd(), '.antigravity/ui_feedback_queue.json');
+    try {
+      if (fs.existsSync(queueFile)) {
+        const raw = fs.readFileSync(queueFile, 'utf8');
+        const items = JSON.parse(raw);
+        const pending = Array.isArray(items) ? items.filter(i => i.status === 'pending') : [];
+        if (pending.length > 0) {
+          const summary = pending.map(p => 
+            `- [${p.id}] ${p.reactContext?.componentName || p.selector}: "${p.userNotes}"`
+          ).join('\n');
+          console.log(JSON.stringify({
+            injectSteps: [
+              {
+                ephemeralMessage: `📢 PENDING UI FEEDBACK from Browser:\n${summary}\n\nUse MCP tool get_ui_feedback or list_ui_feedback to inspect and resolve.`
+              }
+            ]
+          }));
+          process.exit(0);
+        }
+      }
+    } catch (_) {}
+    console.log(JSON.stringify({ injectSteps: [] }));
+    return;
+  }
+
   if (command === 'mcp') {
     const mcp = createMcpServer();
     await mcp.startStdio();
@@ -83,28 +111,65 @@ async function main() {
   }
 
   // DEFAULT BEHAVIOR: npx markup-bridge
-  // 1. Setup the background config so it auto-starts next time
+  // 1. Setup the background config so it auto-starts in this project
   const fs = await import('node:fs');
   const path = await import('node:path');
   const agentsDir = path.resolve(process.cwd(), '.agents');
   if (!fs.existsSync(agentsDir)) fs.mkdirSync(agentsDir, { recursive: true });
 
+  // 1a. Configure MCP Server
   const mcpConfigPath = path.join(agentsDir, 'mcp_config.json');
   let mcpConfig = { mcpServers: {} };
-  
   if (fs.existsSync(mcpConfigPath)) {
     try {
       mcpConfig = JSON.parse(fs.readFileSync(mcpConfigPath, 'utf8'));
     } catch (e) {}
   }
-  
   if (!mcpConfig.mcpServers) mcpConfig.mcpServers = {};
   mcpConfig.mcpServers["markup-bridge"] = {
     "command": "npx",
-    "args": ["-y", "markup-by-kabya", "dual"],
+    "args": ["-y", "markup-bridge", "mcp"],
     "env": { "BRIDGE_API_BASE": "http://127.0.0.1:3005" }
   };
   fs.writeFileSync(mcpConfigPath, JSON.stringify(mcpConfig, null, 2));
+
+  // 1b. Configure Lifecycle Hook (Auto-detects pending feedback on next chat message)
+  const hooksConfigPath = path.join(agentsDir, 'hooks.json');
+  let hooksConfig = {};
+  if (fs.existsSync(hooksConfigPath)) {
+    try {
+      hooksConfig = JSON.parse(fs.readFileSync(hooksConfigPath, 'utf8'));
+    } catch (e) {}
+  }
+  hooksConfig["markup-bridge-notifier"] = {
+    "PreInvocation": [
+      {
+        "type": "command",
+        "command": "npx -y markup-bridge check",
+        "timeout": 5
+      }
+    ]
+  };
+  fs.writeFileSync(hooksConfigPath, JSON.stringify(hooksConfig, null, 2));
+
+  // 1c. Configure Agent Skill
+  const skillDir = path.join(agentsDir, 'skills', 'markup-bridge');
+  if (!fs.existsSync(skillDir)) fs.mkdirSync(skillDir, { recursive: true });
+  const skillFile = path.join(skillDir, 'SKILL.md');
+  const skillContent = `---
+name: markup-bridge
+description: Autonomous pair programming workflow for inspecting and addressing UI visual feedback submitted live from the web browser via Markup Bridge MCP.
+---
+
+# Markup Bridge: Visual UI Feedback Workflow
+
+Use this skill whenever pending UI feedback is detected from the browser:
+1. Call \`list_ui_feedback({ status: 'pending' })\` to see pending feedback items.
+2. Call \`get_ui_feedback({ id })\` to inspect the targeted element, component, and user requested notes.
+3. Edit the code to implement the requested UI changes.
+4. Call \`resolve_ui_feedback({ id, resolutionNotes })\` to notify the browser and turn the marker green.
+`;
+  fs.writeFileSync(skillFile, skillContent, 'utf8');
 
   // 2. Start the foreground server immediately so it works right now
   const bridge = createBridgeServer(options);
