@@ -12,7 +12,7 @@ const ROOT_DIR = path.resolve(__dirname, '../../');
 export function createBridgeServer({
   port = 3005,
   host = '127.0.0.1',
-  storageDir = path.resolve(ROOT_DIR, '.antigravity'),
+  storageDir = path.resolve(process.cwd(), '.antigravity'),
   silent = false
 } = {}) {
   const queue = new FeedbackQueue(storageDir);

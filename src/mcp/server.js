@@ -11,7 +11,7 @@ const ROOT_DIR = path.resolve(__dirname, '../../');
 const BRIDGE_API_BASE = process.env.BRIDGE_API_BASE || 'http://127.0.0.1:3005';
 
 export function createMcpServer({
-  storageDir = path.resolve(ROOT_DIR, '.antigravity')
+  storageDir = path.resolve(process.cwd(), '.antigravity')
 } = {}) {
   const queue = new FeedbackQueue(storageDir);
 
