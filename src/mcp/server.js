@@ -68,9 +68,14 @@ export function createMcpServer({
 
       const formatted = items.map((item, idx) => {
         const comp = item.reactContext?.componentName || 'DOM Element';
-        const src = item.reactContext?.source
+        let src = item.reactContext?.source
           ? ` (${item.reactContext.source.file}:${item.reactContext.source.line})`
           : '';
+        if (!src && item.url && item.url.startsWith('file://')) {
+          try {
+            src = ` (${new URL(item.url).pathname})`;
+          } catch (_) {}
+        }
         return `### [${idx + 1}] Feedback ID: \`${item.id}\`
 - **Status**: ${item.status.toUpperCase()} (${item.tag || 'general'})
 - **Target Component**: \`${comp}\`${src}
@@ -118,6 +123,14 @@ export function createMcpServer({
       details += `- **Tag / Category**: ${item.tag}\n`;
       details += `- **Page URL**: ${item.url}\n`;
       details += `- **Timestamp**: ${item.timestamp}\n\n`;
+
+      if (item.url && item.url.startsWith('file://')) {
+        try {
+          const directFile = new URL(item.url).pathname;
+          details += `## 🎯 Direct File Location\n`;
+          details += `- **Exact File Path on Disk**: \`${directFile}\`\n\n`;
+        } catch (_) {}
+      }
 
       details += `## 📝 User Requested Notes\n`;
       details += `> ${item.userNotes || 'None'}\n\n`;
