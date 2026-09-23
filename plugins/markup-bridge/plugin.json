@@ -1,0 +1,24 @@
+{
+  "name": "markup-bridge",
+  "version": "1.0.0",
+  "displayName": "Markup Bridge for Antigravity",
+  "description": "Production-grade bidirectional visual UI feedback bridge connecting any web app (React, Vue, Svelte, Angular, HTML) to Antigravity via MCP.",
+  "author": "Kabya",
+  "homepage": "https://github.com/kabya/markup-bridge",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/kabya/markup-bridge"
+  },
+  "skills": [
+    "skills/markup-bridge"
+  ],
+  "mcpServers": {
+    "markup-bridge": {
+      "command": "node",
+      "args": ["bin/markup-bridge.js", "mcp"],
+      "env": {
+        "BRIDGE_API_BASE": "http://127.0.0.1:3005"
+      }
+    }
+  }
+}

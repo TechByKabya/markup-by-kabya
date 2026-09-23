@@ -1,0 +1,37 @@
+{
+  "name": "markup-by-kabya",
+  "version": "1.0.0",
+  "description": "Bidirectional UI Visual Feedback Bridge for Antigravity via MCP",
+  "main": "src/server/index.js",
+  "exports": {
+    ".": "./src/server/index.js",
+    "./vite": "./src/plugins/vite.js",
+    "./next": "./src/plugins/next.js",
+    "./client": "./src/client/client.js"
+  },
+  "type": "module",
+  "bin": {
+    "markup-bridge": "./bin/markup-bridge.js"
+  },
+  "scripts": {
+    "start": "node bin/markup-bridge.js dual",
+    "server": "node bin/markup-bridge.js server",
+    "mcp": "node bin/markup-bridge.js mcp",
+    "build:extension": "node bin/build-extension.js",
+    "test": "node --test test/*.test.js"
+  },
+  "keywords": [
+    "antigravity",
+    "mcp",
+    "model-context-protocol",
+    "ui-feedback",
+    "inspector",
+    "react-fiber"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.6.0",
+    "zod": "^3.24.2"
+  }
+}

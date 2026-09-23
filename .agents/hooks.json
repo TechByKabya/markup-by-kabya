@@ -1,0 +1,11 @@
+{
+  "ui-feedback-notifier": {
+    "PreInvocation": [
+      {
+        "type": "command",
+        "command": "./bin/check-pending.js",
+        "timeout": 5
+      }
+    ]
+  }
+}
