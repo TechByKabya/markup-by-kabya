@@ -52,9 +52,8 @@ async function probeBridge() {
     }
   } catch (_) {
     bridgeOnline = false;
-    chrome.action.setBadgeBackgroundColor({ color: '#dc2626' });
-    chrome.action.setBadgeText({ text: '!' });
-    chrome.action.setTitle({ title: 'Markup Bridge — Daemon Offline (run: npx markup-by-kabya server)' });
+    chrome.action.setBadgeText({ text: '' });
+    chrome.action.setTitle({ title: 'Markup Bridge — Daemon Offline (run: npx markup-bridge)' });
   }
 }
 
