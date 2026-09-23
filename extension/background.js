@@ -19,12 +19,18 @@ chrome.storage.sync.get({ bridgePort: DEFAULT_PORT }, (prefs) => {
   probeBridge();
 });
 
-// ── Register context menu
+// ── Register context menu on install/update
+// NOTE: contextMenus.create must only be called here (inside onInstalled),
+// not at top-level — calling it at top-level on service worker restart
+// throws "Cannot create item with duplicate ID" and crashes the worker.
 chrome.runtime.onInstalled.addListener(() => {
-  chrome.contextMenus.create({
-    id: 'markup-bridge-toggle',
-    title: 'Inspect with Markup Bridge (Alt + Shift + X)',
-    contexts: ['all']
+  // Clear any previously registered items first to avoid duplicate ID errors
+  chrome.contextMenus.removeAll(() => {
+    chrome.contextMenus.create({
+      id: 'markup-bridge-toggle',
+      title: 'Inspect with Markup Bridge (Alt + Shift + X)',
+      contexts: ['all']
+    });
   });
   probeBridge();
 });
@@ -57,7 +63,9 @@ async function probeBridge() {
   }
 }
 
-// ── Probe every 15 seconds (Mv3 compatible)
+// ── Periodic health probe via alarms (MV3 compatible, survives service worker sleep)
+// Uses alarms API instead of setInterval — setInterval is killed when the SW sleeps.
+// Requires "alarms" permission in manifest.json.
 chrome.alarms.create('probeBridge', { periodInMinutes: 0.25 });
 chrome.alarms.onAlarm.addListener((alarm) => {
   if (alarm.name === 'probeBridge') {
@@ -65,14 +73,24 @@ chrome.alarms.onAlarm.addListener((alarm) => {
   }
 });
 
-// ── Context menu click → inject into tab
+// ── Context menu click → toggle bridge on tab
 chrome.contextMenus.onClicked.addListener(async (info, tab) => {
   if (info.menuItemId === 'markup-bridge-toggle' && tab && tab.id) {
     try {
       await chrome.tabs.sendMessage(tab.id, { action: 'toggleBridge' });
     } catch (_) {
-      // Content script not ready yet — tab may have just loaded
-      console.warn('[MarkupBridge] Toggle skipped: content script not ready on tab', tab.id);
+      // Content script not injected yet — inject it first, then toggle
+      try {
+        await chrome.scripting.executeScript({
+          target: { tabId: tab.id },
+          files: ['content.js', 'client.bundle.js']
+        });
+        setTimeout(() => {
+          chrome.tabs.sendMessage(tab.id, { action: 'toggleBridge' }).catch(() => {});
+        }, 150);
+      } catch (err) {
+        console.warn('[MarkupBridge] Injection failed from context menu:', err);
+      }
     }
   }
 });
@@ -86,7 +104,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       .then(r => r.json())
       .then(data => sendResponse({ online: true, port, pendingCount: data.pendingCount || 0 }))
       .catch(() => sendResponse({ online: false, port, pendingCount: 0 }));
-    return true; // async
+    return true; // keep channel open for async response
   }
 
   // Port changed in setup page
@@ -95,20 +113,21 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     chrome.storage.sync.set({ bridgePort: cachedPort });
     probeBridge();
     sendResponse({ ok: true });
+    return true;
   }
 
-  // Popup requesting to inject bridge into tab
+  // Popup requesting to inject bridge into current tab
   if (msg.action === 'injectCurrentTab' && msg.tabId) {
     chrome.scripting.executeScript({
       target: { tabId: msg.tabId },
       files: ['content.js', 'client.bundle.js']
     }).then(() => {
-      // Allow it a tiny bit of time to init, then toggle it
       setTimeout(() => {
         chrome.tabs.sendMessage(msg.tabId, { action: 'toggleBridge' }).catch(() => {});
-      }, 100);
+      }, 150);
     }).catch(err => console.warn('[MarkupBridge] Injection failed:', err));
     sendResponse({ ok: true });
+    return true;
   }
 
   return true;
