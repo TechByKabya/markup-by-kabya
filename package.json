@@ -1,6 +1,6 @@
 {
   "name": "markup-bridge",
-  "version": "2.0.2",
+  "version": "2.0.3",
   "description": "Zero-touch bidirectional UI Visual Feedback Bridge for Antigravity via MCP — auto-executes browser UI changes with no manual prompting",
   "main": "src/server/index.js",
   "exports": {
