@@ -31,12 +31,12 @@ export class FeedbackQueue {
     }
   }
 
-  persist() {
+  async persist() {
     try {
       if (!fs.existsSync(this.storageDir)) {
-        fs.mkdirSync(this.storageDir, { recursive: true });
+        await fs.promises.mkdir(this.storageDir, { recursive: true });
       }
-      fs.writeFileSync(this.storageFile, JSON.stringify(this.items, null, 2), 'utf8');
+      await fs.promises.writeFile(this.storageFile, JSON.stringify(this.items, null, 2), 'utf8');
     } catch (err) {
       console.error('[FeedbackQueue] Error writing to disk:', err.message);
     }

@@ -57,8 +57,13 @@ async function probeBridge() {
   }
 }
 
-// ── Probe every 15 seconds
-setInterval(probeBridge, 15000);
+// ── Probe every 15 seconds (Mv3 compatible)
+chrome.alarms.create('probeBridge', { periodInMinutes: 0.25 });
+chrome.alarms.onAlarm.addListener((alarm) => {
+  if (alarm.name === 'probeBridge') {
+    probeBridge();
+  }
+});
 
 // ── Context menu click → inject into tab
 chrome.contextMenus.onClicked.addListener(async (info, tab) => {

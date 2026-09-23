@@ -1343,14 +1343,25 @@ window.__INIT_MARKUP_BRIDGE__ = function () {
     }
   }
 
+  let isHoverScheduled = false;
+
   function onMouseMove(e) {
     if (!isActive || isModalOpen || currentMode !== 'inspect') return;
+    
+    // Throttle to 60fps using requestAnimationFrame
+    if (isHoverScheduled) return;
+    isHoverScheduled = true;
 
-    const target = document.elementFromPoint(e.clientX, e.clientY);
-    if (!target || target === host || host.contains(target)) return;
+    requestAnimationFrame(() => {
+      isHoverScheduled = false;
+      const target = document.elementFromPoint(e.clientX, e.clientY);
+      if (!target || target === host || host.contains(target)) return;
 
-    hoveredElement = target;
-    updateHighlight(target);
+      if (hoveredElement !== target) {
+        hoveredElement = target;
+        updateHighlight(target);
+      }
+    });
   }
 
   function onElementClick(e) {
