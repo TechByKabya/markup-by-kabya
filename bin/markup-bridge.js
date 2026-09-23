@@ -33,63 +33,38 @@ function parseArgs() {
 
 function printHelp() {
   console.log(`
-Markup Bridge for Antigravity (Bidirectional UI Visual Feedback System)
+Markup Bridge (Visual UI Feedback System)
 
 Usage:
-  markup-bridge [command] [options]
-
-Commands:
-  server              Start the HTTP bridge server (default, on port 3005)
-  mcp                 Start the Model Context Protocol (MCP) stdio server for Antigravity
-  dual                Run both the HTTP bridge server and the MCP server concurrently
+  npx markup-bridge             Start the daemon and configure it to auto-run in this project
+  npx markup-bridge uninstall   Remove the auto-run configuration from this project
 
 Options:
   --port=<port>       HTTP port to listen on (default: 3005)
-  --host=<host>       HTTP host to bind (default: 127.0.0.1)
   --help, -h          Show this help message
-
-Examples:
-  npx markup-bridge server --port=3005
-  npx markup-bridge mcp
-  npx markup-bridge dual
 `);
 }
 
 async function main() {
   const options = parseArgs();
 
-  if (command === 'init') {
+  if (command === 'uninstall' || command === 'remove') {
     const fs = await import('node:fs');
     const path = await import('node:path');
-    const agentsDir = path.resolve(process.cwd(), '.agents');
-    if (!fs.existsSync(agentsDir)) fs.mkdirSync(agentsDir, { recursive: true });
+    const mcpConfigPath = path.resolve(process.cwd(), '.agents', 'mcp_config.json');
 
-    const mcpConfig = {
-      mcpServers: {
-        "markup-bridge": {
-          "command": "node",
-          "args": [__filename, "dual"],
-          "env": { "BRIDGE_API_BASE": "http://127.0.0.1:3005" }
+    if (fs.existsSync(mcpConfigPath)) {
+      try {
+        const mcpConfig = JSON.parse(fs.readFileSync(mcpConfigPath, 'utf8'));
+        if (mcpConfig.mcpServers && mcpConfig.mcpServers["markup-bridge"]) {
+          delete mcpConfig.mcpServers["markup-bridge"];
+          fs.writeFileSync(mcpConfigPath, JSON.stringify(mcpConfig, null, 2));
+          console.log(`[MarkupBridge] Successfully removed background daemon configuration.`);
         }
+      } catch (e) {
+        // Ignore parse errors
       }
-    };
-    fs.writeFileSync(path.join(agentsDir, 'mcp_config.json'), JSON.stringify(mcpConfig, null, 2));
-
-    console.log(`
-🎉 [MarkupBridge] Project initialized successfully!
-📁 Created .agents/mcp_config.json
-👉 Start the bridge server with: npx markup-bridge server
-👉 Add to your web app: <script src="http://127.0.0.1:3005/client.js"></script>
-`);
-    return;
-  }
-
-  if (command === 'watch') {
-    const { spawn } = await import('node:child_process');
-    const path = await import('node:path');
-    const watchScript = path.resolve(__dirname, 'watch-feedback.js');
-    const child = spawn('node', [watchScript], { stdio: 'inherit' });
-    child.on('exit', code => process.exit(code || 0));
+    }
     return;
   }
 
@@ -100,23 +75,45 @@ async function main() {
   }
 
   if (command === 'dual') {
-    // In dual mode, start HTTP bridge server without polluting stdout so stdio MCP remains clean
     const bridge = createBridgeServer({ ...options, silent: true });
     await bridge.start();
-
     const mcp = createMcpServer();
     await mcp.startStdio();
     return;
   }
 
-  // Default: start HTTP bridge server
+  // DEFAULT BEHAVIOR: npx markup-bridge
+  // 1. Setup the background config so it auto-starts next time
+  const fs = await import('node:fs');
+  const path = await import('node:path');
+  const agentsDir = path.resolve(process.cwd(), '.agents');
+  if (!fs.existsSync(agentsDir)) fs.mkdirSync(agentsDir, { recursive: true });
+
+  const mcpConfigPath = path.join(agentsDir, 'mcp_config.json');
+  let mcpConfig = { mcpServers: {} };
+  
+  if (fs.existsSync(mcpConfigPath)) {
+    try {
+      mcpConfig = JSON.parse(fs.readFileSync(mcpConfigPath, 'utf8'));
+    } catch (e) {}
+  }
+  
+  if (!mcpConfig.mcpServers) mcpConfig.mcpServers = {};
+  mcpConfig.mcpServers["markup-bridge"] = {
+    "command": "npx",
+    "args": ["-y", "markup-by-kabya", "dual"],
+    "env": { "BRIDGE_API_BASE": "http://127.0.0.1:3005" }
+  };
+  fs.writeFileSync(mcpConfigPath, JSON.stringify(mcpConfig, null, 2));
+
+  // 2. Start the foreground server immediately so it works right now
   const bridge = createBridgeServer(options);
   await bridge.start();
 
-  const shutdown = async () => {
+  const shutdown = () => {
     console.log('\n[MarkupBridge] Shutting down bridge server...');
-    await bridge.close();
-    process.exit(0);
+    bridge.close(); 
+    setTimeout(() => process.exit(0), 100); 
   };
 
   process.on('SIGINT', shutdown);
@@ -126,9 +123,9 @@ async function main() {
 main().catch((err) => {
   if (err.code === 'EADDRINUSE') {
     console.log(`
-ℹ️  [MarkupBridge] Bridge server is already running on http://127.0.0.1:3005!
-👉 The server is active and ready to receive feedback from your browser.
-👉 To restart it, run: lsof -ti:3005 | xargs kill -9 && npm run server
+[MarkupBridge] Note: Bridge server is already running on http://127.0.0.1:3005.
+The server is active and ready to receive feedback.
+To force restart, run: lsof -ti:3005 | xargs kill -9 && npm run server
 `);
     process.exit(0);
   }

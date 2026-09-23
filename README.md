@@ -1,42 +1,65 @@
-# Markup Bridge for Antigravity IDE
+# Markup Bridge
 
-Markup Bridge is the ultimate visual feedback tool for AI-assisted frontend development. 
+A bidirectional UI visual feedback and inspection bridge designed to connect web applications directly to the Antigravity system via the Model Context Protocol (MCP).
 
-Instead of typing out long descriptions like *"move the blue button 10px to the left"*, you simply click on the button in your browser, add a visual pin, and the feedback is instantly sent directly into your Antigravity IDE for the AI to fix!
+Markup Bridge injects a production-grade shadow DOM visual inspector into any web environment, allowing developers and QA engineers to select DOM elements, draw area markers, and submit structured feedback. This feedback is securely transmitted via an active MCP server directly into your local Antigravity AI agent context.
 
-It works on **any website**, **any framework** (React, Vue, HTML), and **any port** without injecting a single line of code into your project files.
+## Architecture
 
-## 🚀 Setup Instructions (Just 2 Steps!)
+Markup Bridge consists of three core components:
 
-### Step 1: Install the Chrome Extension
-1. Download the `markup-bridge-extension.zip` file from the releases.
-2. Unzip it to a folder.
-3. Open Chrome and navigate to `chrome://extensions`.
-4. Turn on **Developer mode** (top right corner).
-5. Click **Load unpacked** and select the unzipped folder.
+1. **Client Injector (Chrome Extension or Script Tag)**
+   - Injects an encapsulated shadow DOM UI overlay into the host page.
+   - Handles pointer events, element picking, computed style extraction, React Fiber state extraction, and screenshot capturing.
+   - Communicates with the daemon via Server-Sent Events (SSE) and HTTP POST.
 
-### Step 2: Connect Your Project
-Open the project you are working on in your terminal, and run:
+2. **Bridge Daemon (Node.js)**
+   - A lightweight HTTP/SSE server running locally on port 3005.
+   - Receives structured feedback payloads from the client UI.
+   - Manages a persistent queue of feedback events written to disk.
+
+3. **MCP Integration**
+   - Implements the standard Model Context Protocol via Stdio.
+   - Exposes tools for the Antigravity agent to query, list, and resolve the feedback queue natively.
+
+## Installation
+
+To initialize the daemon and install the necessary MCP configurations into your Antigravity workspace, run the following command in the root of your project:
+
 ```bash
-npx markup-by-kabya init
+npx markup-bridge
 ```
 
-**That's it! You are done.** 
+This command will:
+- Spin up the local HTTP/SSE bridge daemon.
+- Automatically register the Markup Bridge MCP server into your `.agents/mcp_config.json` file.
 
-When you open your project in the Antigravity IDE, it will automatically detect the configuration, silently launch the bridge in the background, and connect to your Chrome Extension.
+### Chrome Extension Installation
 
-## 🎯 How to Use It
+For the best developer experience, use the Markup Bridge Chrome Extension to inject the client UI across any local or remote web application:
 
-1. Open your web app (e.g. `http://localhost:3000`) in Chrome.
-2. Click the **Markup Bridge** extension icon in your toolbar and click **Toggle Inspector** (or use the shortcut `Alt + Shift + X`).
-3. Click any element on your page (like a button, heading, or card).
-4. A comment box will appear. Type your requested changes (e.g., *"Make this text bold and red"*).
-5. Click **Submit**.
+1. Navigate to `chrome://extensions` in your Google Chrome browser.
+2. Enable **Developer Mode**.
+3. Select **Load unpacked**.
+4. Select the `extension/` directory located within this repository.
+5. Click the Markup Bridge extension icon in your toolbar to toggle the inspector on your active tab.
 
-The AI agent in your Antigravity IDE will immediately receive your feedback, know exactly which file and line of code you are pointing at, and implement the change for you!
+## Usage
 
-## 🛠️ How It Works (For Nerds)
+### Providing Feedback
+Once the extension is active on a web page, you can interact with the DOM using the following modes:
+- **Element Inspection:** Hover and click on any specific DOM node to capture its outer HTML, computed CSS styles, and React Fiber context.
+- **Area Selection:** Draw rectangles or drop coordinate pins to annotate spatial areas.
+- **Payload Submission:** Add structured notes, assign tags (e.g., Bug, Styling, Feature), and submit. The payload is instantly relayed to the local daemon.
 
-Markup Bridge utilizes the **Model Context Protocol (MCP)**. When you run the `init` command, it generates an `.agents/mcp_config.json` file in your repository.
+### Antigravity AI Context
+When feedback is submitted, your Antigravity AI agent can natively read and act on the feedback queue. The agent receives a comprehensive context payload containing:
+- Target Element Selector
+- Full URL and Page Context (Path, Search queries, Viewport)
+- Extracted CSS Computed Styles
+- React Component State
+- Base64 Screenshot Snippets
+- User Annotations
 
-The Antigravity IDE reads this file and spins up a "Dual Mode" MCP server. This server silently runs a local HTTP bridge (port 3005) in the background that talks to the Chrome Extension, while simultaneously opening an MCP channel to the IDE. This means zero manual server management for you!
+## License
+MIT License. See LICENSE for more information.

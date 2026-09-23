@@ -4,8 +4,7 @@
  */
 
 const statusDot = document.getElementById('status-dot');
-const statusTitle = document.getElementById('status-title');
-const statusDesc = document.getElementById('status-desc');
+const statusText = document.getElementById('status-text');
 const btnRecheck = document.getElementById('btn-recheck');
 const prefPort = document.getElementById('pref-port');
 const prefShowPill = document.getElementById('pref-show-pill');
@@ -15,41 +14,38 @@ async function checkBridgeHealth() {
   const port = prefPort.value || 3005;
   const endpoint = `http://127.0.0.1:${port}/health`;
 
-  statusDot.className = 'status-indicator';
-  statusTitle.textContent = 'Checking Local Bridge Server...';
-  statusDesc.textContent = `Pinging ${endpoint}`;
+  statusDot.className = 'dot';
+  statusText.textContent = `Pinging http://127.0.0.1:${port}...`;
 
   try {
     const res = await fetch(endpoint);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
 
-    statusDot.className = 'status-indicator online';
-    statusTitle.textContent = 'Local Bridge Server Connected';
-    statusDesc.textContent = `Active on port ${port} • Uptime: ${Math.round(data.uptime)}s • ${data.pendingCount || 0} pending items`;
+    statusDot.className = 'dot online';
+    statusText.textContent = `Connected (Uptime: ${Math.round(data.uptime)}s)`;
   } catch (_) {
-    statusDot.className = 'status-indicator offline';
-    statusTitle.textContent = 'Bridge Server Not Detected';
-    statusDesc.textContent = `Ensure 'npx markup-bridge server' is running in your terminal.`;
+    statusDot.className = 'dot offline';
+    statusText.textContent = `Offline. Run 'npx markup-bridge server'`;
   }
 }
 
 btnRecheck.addEventListener('click', checkBridgeHealth);
 
 // 2. Copy Code Handlers
-document.getElementById('btn-copy-mcp').addEventListener('click', (e) => {
-  const text = document.getElementById('code-mcp').textContent;
-  navigator.clipboard.writeText(text);
-  e.target.textContent = 'Copied';
-  setTimeout(() => (e.target.textContent = 'Copy'), 2000);
-});
+const setupCopy = (btnId, cmdId) => {
+  const btn = document.getElementById(btnId);
+  if (!btn) return;
+  btn.addEventListener('click', () => {
+    const text = document.getElementById(cmdId).textContent;
+    navigator.clipboard.writeText(text);
+    btn.textContent = 'Copied';
+    setTimeout(() => (btn.textContent = 'Copy'), 2000);
+  });
+};
 
-document.getElementById('btn-copy-cmd').addEventListener('click', (e) => {
-  const text = document.getElementById('code-cmd').textContent;
-  navigator.clipboard.writeText(text);
-  e.target.textContent = 'Copied';
-  setTimeout(() => (e.target.textContent = 'Copy'), 2000);
-});
+setupCopy('btn-copy-init', 'cmd-init');
+setupCopy('btn-copy-remove', 'cmd-remove');
 
 // 3. Preferences Storage
 if (typeof chrome !== 'undefined' && chrome.storage) {

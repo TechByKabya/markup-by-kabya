@@ -140,12 +140,25 @@
     <span id="status-port" style="font-size: 11px; color: var(--text-muted);">127.0.0.1:3005</span>
   </div>
 
+  <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; padding: 0 4px;">
+    <span style="font-weight: 600; font-size: 12px;">Extension Enabled</span>
+    <label class="switch" style="position: relative; display: inline-block; width: 34px; height: 20px;">
+      <input type="checkbox" id="chk-master-enable" style="opacity: 0; width: 0; height: 0;" checked>
+      <span class="slider" style="position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #cbd5e1; transition: .2s; border-radius: 34px;"></span>
+      <style>
+        input:checked + .slider { background-color: #16a34a; }
+        .slider:before { position: absolute; content: ""; height: 14px; width: 14px; left: 3px; bottom: 3px; background-color: white; transition: .2s; border-radius: 50%; }
+        input:checked + .slider:before { transform: translateX(14px); }
+      </style>
+    </label>
+  </div>
+
   <button class="btn btn-primary" id="btn-activate">
     Toggle Inspector on Active Tab
   </button>
 
   <button class="btn" id="btn-setup">
-    <span>Antigravity Setup & Configuration</span>
+    <span>Workspace Setup & Configuration</span>
     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-left: auto;">
       <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
       <polyline points="15 3 21 3 21 9"></polyline>

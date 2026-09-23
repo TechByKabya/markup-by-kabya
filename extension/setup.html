@@ -3,26 +3,20 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Markup Bridge - Setup & Configuration</title>
+  <title>Markup Bridge - Dashboard</title>
   <style>
     :root {
-      --bg: #f8fafc;
+      --bg: #fafafa;
       --surface: #ffffff;
-      --surface-subtle: #f1f5f9;
-      --surface-muted: #e2e8f0;
-      --border: #e2e8f0;
-      --border-strong: #cbd5e1;
-      --text: #0f172a;
-      --text-muted: #475569;
-      --text-subtle: #94a3b8;
-      --primary: #0f172a;
-      --primary-hover: #1e293b;
-      --success: #16a34a;
-      --success-bg: #f0fdf4;
-      --danger: #dc2626;
-      --danger-bg: #fef2f2;
-      --radius: 6px;
-      --radius-lg: 10px;
+      --border: #eaeaea;
+      --border-focus: #007aff;
+      --text: #111827;
+      --text-muted: #6b7280;
+      --primary: #007aff;
+      --primary-hover: #006ae6;
+      --success: #34c759;
+      --danger: #ff3b30;
+      --radius: 8px;
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -34,306 +28,187 @@
       line-height: 1.5;
       font-size: 14px;
       -webkit-font-smoothing: antialiased;
-      padding: 40px 20px 80px;
+      padding: 60px 20px;
     }
 
     .container {
-      max-width: 840px;
+      max-width: 680px;
       margin: 0 auto;
       display: flex;
       flex-direction: column;
-      gap: 28px;
+      gap: 32px;
     }
 
     /* Header */
     .header {
       display: flex;
-      justify-content: space-between;
       align-items: center;
-      border-bottom: 1px solid var(--border);
+      justify-content: space-between;
       padding-bottom: 24px;
+      border-bottom: 1px solid var(--border);
     }
 
-    .header-brand {
+    .header-content {
       display: flex;
       align-items: center;
-      gap: 14px;
+      gap: 16px;
     }
 
-    .logo-badge {
-      width: 40px;
-      height: 40px;
-      border-radius: var(--radius);
-      background: var(--primary);
+    .logo {
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
+      background: #fff;
+      border: 1px solid var(--border);
       display: flex;
       align-items: center;
       justify-content: center;
-      color: #fff;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.05);
     }
 
-    .header-title {
-      font-size: 20px;
-      font-weight: 700;
-      letter-spacing: -0.3px;
+    .logo svg {
+      width: 24px;
+      height: 24px;
+    }
+
+    .title h1 {
+      font-size: 22px;
+      font-weight: 600;
+      letter-spacing: -0.5px;
       color: var(--text);
     }
 
-    .header-desc {
-      font-size: 13px;
+    .title p {
+      font-size: 14px;
       color: var(--text-muted);
-      margin-top: 2px;
+      margin-top: 4px;
     }
 
-    .tag-version {
-      font-size: 11px;
-      font-weight: 600;
-      padding: 4px 10px;
-      border-radius: 9999px;
-      background: var(--surface-subtle);
-      border: 1px solid var(--border);
-      color: var(--text-muted);
-    }
-
-    /* Status Card */
-    .status-card {
+    /* Status Banner */
+    .status-banner {
       background: var(--surface);
       border: 1px solid var(--border);
-      border-radius: var(--radius-lg);
-      padding: 20px 24px;
+      border-radius: var(--radius);
+      padding: 16px 20px;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
-    }
-
-    .status-info {
-      display: flex;
-      align-items: center;
-      gap: 14px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.02);
     }
 
     .status-indicator {
-      width: 10px;
-      height: 10px;
-      border-radius: 50%;
-      background: var(--border-strong);
-      transition: background 0.25s, box-shadow 0.25s;
-    }
-
-    .status-indicator.online {
-      background: var(--success);
-      box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.15);
-    }
-
-    .status-indicator.offline {
-      background: var(--danger);
-      box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.15);
-    }
-
-    .status-heading {
-      font-weight: 600;
-      font-size: 14px;
-      color: var(--text);
-    }
-
-    .status-subtext {
-      font-size: 12px;
-      color: var(--text-muted);
-      margin-top: 1px;
-    }
-
-    .btn {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      padding: 8px 14px;
-      border-radius: var(--radius);
-      font-size: 13px;
-      font-weight: 600;
-      cursor: pointer;
-      border: 1px solid var(--border);
-      background: var(--surface);
-      color: var(--text);
-      transition: background 0.15s, border-color 0.15s;
-    }
-
-    .btn:hover {
-      background: var(--surface-subtle);
-      border-color: var(--border-strong);
-    }
-
-    .btn-primary {
-      background: var(--primary);
-      color: #fff;
-      border-color: var(--primary);
-    }
-
-    .btn-primary:hover {
-      background: var(--primary-hover);
-      border-color: var(--primary-hover);
-    }
-
-    /* Section Cards */
-    .section-card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-lg);
-      padding: 24px;
-      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
-    }
-
-    .section-title {
-      font-size: 15px;
-      font-weight: 700;
-      color: var(--text);
-      margin-bottom: 6px;
       display: flex;
       align-items: center;
       gap: 10px;
+      font-weight: 500;
+      font-size: 14px;
     }
 
-    .step-number {
-      width: 22px;
-      height: 22px;
+    .dot {
+      width: 10px;
+      height: 10px;
       border-radius: 50%;
-      background: var(--surface-subtle);
-      border: 1px solid var(--border-strong);
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 11px;
-      font-weight: 700;
-      color: var(--text);
+      background: #ccc;
     }
 
-    .section-desc {
+    .dot.online {
+      background: var(--success);
+      box-shadow: 0 0 0 3px rgba(52, 199, 89, 0.2);
+    }
+
+    .dot.offline {
+      background: var(--danger);
+      box-shadow: 0 0 0 3px rgba(255, 59, 48, 0.2);
+    }
+
+    .btn {
+      padding: 8px 16px;
+      border-radius: 6px;
       font-size: 13px;
-      color: var(--text-muted);
-      margin-bottom: 16px;
-      line-height: 1.55;
-    }
-
-    /* Zero Code Highlight Box */
-    .callout-box {
-      background: var(--surface-subtle);
+      font-weight: 500;
+      cursor: pointer;
       border: 1px solid var(--border);
-      border-left: 3px solid var(--primary);
-      border-radius: 0 var(--radius) var(--radius) 0;
-      padding: 14px 16px;
-      margin-bottom: 18px;
-      font-size: 13px;
+      background: var(--surface);
       color: var(--text);
-      line-height: 1.5;
+      transition: all 0.2s;
     }
 
-    .callout-title {
-      font-weight: 600;
-      font-size: 13px;
-      margin-bottom: 4px;
-      display: flex;
-      align-items: center;
-      gap: 6px;
+    .btn:hover {
+      background: #f9fafb;
+      border-color: #d1d5db;
     }
 
-    /* Code Blocks */
-    .code-container {
-      background: var(--surface-subtle);
+    /* Command Sections */
+    .section {
+      background: var(--surface);
       border: 1px solid var(--border);
       border-radius: var(--radius);
-      margin-bottom: 16px;
-      overflow: hidden;
+      padding: 24px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.02);
     }
 
-    .code-header {
+    .section h2 {
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+
+    .section p {
+      font-size: 14px;
+      color: var(--text-muted);
+      margin-bottom: 20px;
+    }
+
+    .command-group {
+      margin-bottom: 24px;
+    }
+
+    .command-group:last-child {
+      margin-bottom: 0;
+    }
+
+    .command-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 8px 14px;
-      border-bottom: 1px solid var(--border);
-      font-size: 11px;
-      font-weight: 600;
-      color: var(--text-muted);
-      background: #e9eef5;
+      margin-bottom: 6px;
     }
 
-    .code-body {
-      padding: 12px 14px;
-      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-      font-size: 12px;
-      color: #1e293b;
-      line-height: 1.6;
-      overflow-x: auto;
-      white-space: pre;
-    }
-
-    .copy-btn {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      font-size: 11px;
-      font-weight: 600;
-      color: var(--text-muted);
-      cursor: pointer;
-      padding: 3px 8px;
-      border-radius: 4px;
-      transition: all 0.15s;
-    }
-
-    .copy-btn:hover {
-      background: #fff;
-      color: var(--text);
-      border-color: var(--border-strong);
-    }
-
-    /* Clean Key Table */
-    .key-table {
-      width: 100%;
-      border-collapse: collapse;
+    .command-title {
       font-size: 13px;
-      margin-top: 8px;
-    }
-
-    .key-table th, .key-table td {
-      padding: 10px 12px;
-      text-align: left;
-      border-bottom: 1px solid var(--border);
-      vertical-align: middle;
-    }
-
-    .key-table th {
-      font-size: 11px;
       font-weight: 600;
       color: var(--text-muted);
       text-transform: uppercase;
       letter-spacing: 0.5px;
-      background: var(--surface-subtle);
     }
 
-    .key-table tr:last-child td {
-      border-bottom: none;
-    }
-
-    .tool-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      padding: 3px 8px;
-      border-radius: 4px;
-      background: var(--surface-subtle);
+    .command-box {
+      background: #f3f4f6;
       border: 1px solid var(--border);
-      font-size: 12px;
-      font-weight: 500;
-      color: var(--text);
+      border-radius: 6px;
+      padding: 12px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
     }
 
-    kbd {
-      background: var(--surface-subtle);
-      border: 1px solid var(--border-strong);
-      padding: 2px 6px;
-      border-radius: 4px;
-      font-family: inherit;
-      font-size: 11px;
+    .command-box code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 13px;
+      color: #1f2937;
+    }
+
+    .copy-btn {
+      background: transparent;
+      border: none;
+      font-size: 12px;
       font-weight: 600;
-      color: var(--text);
+      color: var(--primary);
+      cursor: pointer;
+    }
+
+    .copy-btn:hover {
+      text-decoration: underline;
     }
 
     /* Preferences */
@@ -341,7 +216,7 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 14px 0;
+      padding: 16px 0;
       border-bottom: 1px solid var(--border);
     }
 
@@ -351,265 +226,118 @@
     }
 
     .pref-label {
-      font-weight: 600;
-      font-size: 13px;
-      color: var(--text);
+      font-weight: 500;
+      font-size: 14px;
     }
 
     .pref-desc {
-      font-size: 12px;
+      font-size: 13px;
       color: var(--text-muted);
-      margin-top: 2px;
+      margin-top: 4px;
     }
 
     .toggle {
       position: relative;
-      width: 40px;
-      height: 22px;
-      flex-shrink: 0;
+      width: 44px;
+      height: 24px;
     }
-
-    .toggle input {
-      opacity: 0;
-      width: 0;
-      height: 0;
-    }
-
+    .toggle input { opacity: 0; width: 0; height: 0; }
     .slider {
       position: absolute;
       cursor: pointer;
       inset: 0;
-      background-color: var(--border-strong);
-      border-radius: 34px;
+      background-color: #d1d5db;
+      border-radius: 24px;
       transition: 0.2s;
     }
-
     .slider:before {
       position: absolute;
       content: "";
-      height: 16px;
-      width: 16px;
+      height: 18px;
+      width: 18px;
       left: 3px;
       bottom: 3px;
       background-color: white;
       border-radius: 50%;
       transition: 0.2s;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.1);
     }
-
     input:checked + .slider {
       background-color: var(--primary);
     }
-
     input:checked + .slider:before {
-      transform: translateX(18px);
+      transform: translateX(20px);
     }
   </style>
 </head>
 <body>
-  <div class="container">
 
+  <div class="container">
+    
     <!-- Header -->
     <header class="header">
-      <div class="header-brand">
-        <div class="logo-badge">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <rect width="18" height="18" x="3" y="3" rx="2"></rect>
-            <path d="M9 3v18"></path>
-            <path d="m14 9 3 3-3 3"></path>
+      <div class="header-content">
+        <div class="logo">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#007aff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="4 17 10 11 4 5"></polyline>
+            <line x1="12" y1="19" x2="20" y2="19"></line>
           </svg>
         </div>
-        <div>
-          <h1 class="header-title">Markup Bridge for Antigravity</h1>
-          <p class="header-desc">Universal Visual UI Feedback Bridge via Model Context Protocol (MCP)</p>
+        <div class="title">
+          <h1>Markup Bridge</h1>
+          <p>Local UI Feedback Daemon</p>
         </div>
       </div>
       <div>
-        <span class="tag-version">Version 1.2.0</span>
+        <span style="font-size: 12px; color: var(--text-muted); font-weight: 500; background: #f3f4f6; padding: 4px 8px; border-radius: 4px;">v1.2.0</span>
       </div>
     </header>
 
-    <!-- Real-time Status Banner -->
-    <div class="status-card">
-      <div class="status-info">
-        <div class="status-indicator" id="status-dot"></div>
-        <div>
-          <div class="status-heading" id="status-title">Checking Local Bridge Server...</div>
-          <div class="status-subtext" id="status-desc">Target: http://127.0.0.1:3005</div>
-        </div>
+    <!-- Status -->
+    <div class="status-banner">
+      <div class="status-indicator">
+        <div class="dot" id="status-dot"></div>
+        <span id="status-text">Checking daemon status...</span>
       </div>
-      <button class="btn" id="btn-recheck">Check Connection</button>
+      <button class="btn" id="btn-recheck">Refresh</button>
     </div>
 
-    <!-- Zero Project Code Callout -->
-    <div class="callout-box">
-      <div class="callout-title">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="12" cy="12" r="10"></circle>
-          <line x1="12" y1="16" x2="12" y2="12"></line>
-          <line x1="12" y1="8" x2="12.01" y2="8"></line>
-        </svg>
-        <span>Zero Project Modification Required</span>
-      </div>
-      <div>
-        This Chrome extension injects the floating widget and inspector across all browser tabs and windows at runtime. You do not need to install npm packages, add script tags, or modify your React, Next.js, Vue, Svelte, or HTML codebase.
-      </div>
-    </div>
+    <!-- Commands Section -->
+    <section class="section">
+      <h2>CLI Commands</h2>
+      <p>Run these commands in your project terminal to manage the local daemon.</p>
 
-    <!-- Step 1: Install in Chrome -->
-    <section class="section-card">
-      <h2 class="section-title">
-        <span class="step-number">1</span>
-        Load Extension into Chrome
-      </h2>
-      <p class="section-desc">
-        Anyone can install this extension into Google Chrome in seconds using Developer Mode:
-      </p>
-
-      <ol style="margin-left: 20px; font-size: 13px; color: var(--text-muted); line-height: 1.8;">
-        <li>Open Chrome and navigate to <code>chrome://extensions</code></li>
-        <li>Enable the <strong>Developer mode</strong> toggle in the upper-right corner.</li>
-        <li>Click <strong>Load unpacked</strong> and select the <code>extension</code> folder in this project (or extract <code>markup-bridge-extension.zip</code>).</li>
-        <li>The Markup Bridge icon will appear in your toolbar, and the floating shortcut pill will show on all pages.</li>
-      </ol>
-    </section>
-
-    <!-- Step 2: Configure Antigravity IDE -->
-    <section class="section-card">
-      <h2 class="section-title">
-        <span class="step-number">2</span>
-        Configure Antigravity IDE
-      </h2>
-      <p class="section-desc">
-        Connect Antigravity to the Markup Bridge MCP server by adding this configuration to your project's <code>.agents/mcp_config.json</code>:
-      </p>
-
-      <div class="code-container">
-        <div class="code-header">
-          <span>.agents/mcp_config.json</span>
-          <button class="copy-btn" id="btn-copy-mcp">Copy</button>
+      <div class="command-group">
+        <div class="command-header">
+          <span class="command-title">Run (Foreground & Auto-Start Setup)</span>
+          <span style="font-size: 12px; color: var(--text-muted);">Ctrl+C to kill</span>
         </div>
-        <pre class="code-body" id="code-mcp">{
-  "mcpServers": {
-    "markup-bridge": {
-      "command": "node",
-      "args": ["/absolute/path/to/markup-by-kabya/bin/markup-bridge.js", "mcp"],
-      "env": {
-        "BRIDGE_API_BASE": "http://127.0.0.1:3005"
-      }
-    }
-  }
-}</pre>
-      </div>
-
-      <p class="section-desc" style="margin-bottom: 0;">
-        Alternatively, execute <code>node bin/markup-bridge.js init</code> in this project directory to generate this file automatically with the correct absolute path.
-      </p>
-    </section>
-
-    <!-- Step 3: Start Bridge Server -->
-    <section class="section-card">
-      <h2 class="section-title">
-        <span class="step-number">3</span>
-        Start Bridge Daemon
-      </h2>
-      <p class="section-desc">
-        Run the local bridge daemon in any terminal window. This manages the feedback queue and provides real-time Server-Sent Events (SSE):
-      </p>
-
-      <div class="code-container">
-        <div class="code-header">
-          <span>Terminal</span>
-          <button class="copy-btn" id="btn-copy-cmd">Copy</button>
+        <div class="command-box">
+          <code id="cmd-init">npx markup-bridge</code>
+          <button class="copy-btn" id="btn-copy-init">Copy</button>
         </div>
-        <pre class="code-body" id="code-cmd">npm run server</pre>
       </div>
 
-      <p class="section-desc" style="margin-bottom: 0;">
-        When active, the server runs at <code>http://127.0.0.1:3005</code> and saves feedback to <code>.antigravity/ui_feedback_queue.json</code>.
-      </p>
-    </section>
-
-    <!-- Step 4: Controls & Usage -->
-    <section class="section-card">
-      <h2 class="section-title">
-        <span class="step-number">4</span>
-        Universal Controls & Inspection Modes
-      </h2>
-      <p class="section-desc">
-        Click the bottom-right floating pill on any web page or press <kbd>Alt</kbd> + <kbd>Shift</kbd> + <kbd>X</kbd> to activate the inspector.
-      </p>
-
-      <table class="key-table">
-        <thead>
-          <tr>
-            <th>Mode / Action</th>
-            <th>Shortcut / Icon</th>
-            <th>Description</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td>Toggle Inspector</td>
-            <td><kbd>Alt</kbd> + <kbd>Shift</kbd> + <kbd>X</kbd></td>
-            <td>Opens or closes the overlay and mode toolbar on the active tab</td>
-          </tr>
-          <tr>
-            <td>Element Inspector</td>
-            <td>
-              <span class="tool-badge">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="22" y1="12" x2="18" y2="12"></line><line x1="6" y1="12" x2="2" y2="12"></line><line x1="12" y1="6" x2="12" y2="2"></line><line x1="12" y1="22" x2="12" y2="18"></line></svg>
-                Element
-              </span>
-            </td>
-            <td>Hover and click any DOM element to capture selector, React Fiber hierarchy, and computed styles</td>
-          </tr>
-          <tr>
-            <td>Rectangle Marking</td>
-            <td>
-              <span class="tool-badge">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"></rect></svg>
-                Box
-              </span>
-            </td>
-            <td>Click and drag across empty whitespace, margins, or components to define exact pixel regions</td>
-          </tr>
-          <tr>
-            <td>Circle Marking</td>
-            <td>
-              <span class="tool-badge">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle></svg>
-                Circle
-              </span>
-            </td>
-            <td>Click and drag to circle specific focal points or components</td>
-          </tr>
-          <tr>
-            <td>Point Pin</td>
-            <td>
-              <span class="tool-badge">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"></path><circle cx="12" cy="10" r="3"></circle></svg>
-                Pin
-              </span>
-            </td>
-            <td>Single-click anywhere to place a point coordinate marker</td>
-          </tr>
-          <tr>
-            <td>Submit Feedback</td>
-            <td><kbd>Cmd</kbd> / <kbd>Ctrl</kbd> + <kbd>Enter</kbd></td>
-            <td>Sends note and snapshot to queue; Antigravity wakes up automatically</td>
-          </tr>
-        </tbody>
-      </table>
+      <div class="command-group">
+        <div class="command-header">
+          <span class="command-title">Uninstall Background Daemon</span>
+          <span style="font-size: 12px; color: var(--text-muted);">Deletes config</span>
+        </div>
+        <div class="command-box">
+          <code id="cmd-remove">npx markup-bridge uninstall</code>
+          <button class="copy-btn" id="btn-copy-remove">Copy</button>
+        </div>
+      </div>
     </section>
 
     <!-- Preferences -->
-    <section class="section-card">
-      <h2 class="section-title">Extension Preferences</h2>
-
+    <section class="section">
+      <h2>Preferences</h2>
+      
       <div class="pref-row">
         <div>
-          <div class="pref-label">Show Floating Pill Widget</div>
-          <div class="pref-desc">Display the bottom-right shortcut pill across all web pages</div>
+          <div class="pref-label">Floating Shortcut Pill</div>
+          <div class="pref-desc">Injects the pill overlay on all webpages. (Shortcut: Alt+Shift+X)</div>
         </div>
         <label class="toggle">
           <input type="checkbox" id="pref-show-pill" checked>
@@ -619,10 +347,10 @@
 
       <div class="pref-row">
         <div>
-          <div class="pref-label">Bridge Daemon Port</div>
-          <div class="pref-desc">Local port for bridge HTTP and SSE communication (default: 3005)</div>
+          <div class="pref-label">Daemon Port</div>
+          <div class="pref-desc">Local HTTP port used to communicate with the daemon.</div>
         </div>
-        <input type="number" id="pref-port" value="3005" style="width: 80px; padding: 6px 10px; border: 1px solid var(--border); border-radius: var(--radius); font-size: 13px; font-weight: 500;">
+        <input type="number" id="pref-port" value="3005" style="width: 80px; padding: 6px 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 14px; font-family: monospace;">
       </div>
     </section>
 

@@ -17,11 +17,17 @@
   //       chrome.storage is async, so we do a best-effort sync read via the
   //       background's cached value; if unavailable, the bundle falls back to 3005.
   if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.sync) {
-    chrome.storage.sync.get({ bridgePort: 3005, showPill: true }, function (prefs) {
-      // Stamp the port so client.bundle.js picks it up
+    chrome.storage.sync.get({ bridgePort: 3005, showPill: true, extensionEnabled: true }, function (prefs) {
+      if (!prefs.extensionEnabled) {
+        return; // Master kill switch activated
+      }
+
       window.__MARKUP_BRIDGE_PORT__ = Number(prefs.bridgePort) || 3005;
 
-      // Give client.bundle.js a tick to initialise, then apply pill visibility
+      if (typeof window.__INIT_MARKUP_BRIDGE__ === 'function') {
+        window.__INIT_MARKUP_BRIDGE__();
+      }
+
       setTimeout(() => applyPillVisibility(prefs.showPill), 300);
     });
   } else {
@@ -42,12 +48,27 @@
     if (request.action === 'toggleBridge') {
       if (typeof window.__ANTIGRAVITY_TOGGLE === 'function') {
         window.__ANTIGRAVITY_TOGGLE();
+        sendResponse({ status: 'toggled' });
+      } else {
+        sendResponse({ status: 'not_found' });
       }
-      sendResponse({ status: 'toggled' });
 
     } else if (request.action === 'refreshPreferences') {
-      chrome.storage.sync.get({ bridgePort: 3005, showPill: true }, function (prefs) {
+      chrome.storage.sync.get({ bridgePort: 3005, showPill: true, extensionEnabled: true }, function (prefs) {
         window.__MARKUP_BRIDGE_PORT__ = Number(prefs.bridgePort) || 3005;
+        
+        if (!prefs.extensionEnabled) {
+          // Master kill switch activated: remove UI entirely
+          const host = document.getElementById('antigravity-bridge-host');
+          if (host) host.remove();
+          window.__ANTIGRAVITY_BRIDGE_INITIALIZED__ = false;
+        } else {
+          // Re-init if it was previously killed
+          if (typeof window.__INIT_MARKUP_BRIDGE__ === 'function') {
+            window.__INIT_MARKUP_BRIDGE__();
+          }
+        }
+
         applyPillVisibility(prefs.showPill);
         sendResponse({ status: 'refreshed' });
       });

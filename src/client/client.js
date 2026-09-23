@@ -9,7 +9,7 @@
  * - Real-time bidirectional SSE integration with Antigravity
  */
 
-(function () {
+window.__INIT_MARKUP_BRIDGE__ = function () {
   if (window.__ANTIGRAVITY_BRIDGE_INITIALIZED__) {
     return;
   }
@@ -60,57 +60,62 @@
       padding: 0;
     }
 
-    /* Floating Pill Widget */
+
+
+    /* Reset & Base within Shadow Root */
+    :host {
+      all: initial;
+    }
+    * {
+      box-sizing: border-box;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    }
+
+    /* Floating Pill */
     .ag-pill {
       position: fixed;
       bottom: 24px;
       right: 24px;
+      background: rgba(255, 255, 255, 0.85);
+      backdrop-filter: blur(20px) saturate(180%);
+      -webkit-backdrop-filter: blur(20px) saturate(180%);
+      border: 1px solid rgba(0, 0, 0, 0.1);
+      border-radius: 9999px;
+      padding: 8px 12px 8px 16px;
       display: flex;
       align-items: center;
-      gap: 10px;
-      background: rgba(15, 23, 42, 0.88);
-      backdrop-filter: blur(16px);
-      -webkit-backdrop-filter: blur(16px);
-      border: 1px solid rgba(255, 255, 255, 0.12);
-      border-radius: 9999px;
-      padding: 8px 16px 8px 12px;
-      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.3);
+      gap: 12px;
+      box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.1);
       cursor: pointer;
-      user-select: none;
-      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
       z-index: 2147483647;
+      color: #111827;
+      font-size: 13px;
+      user-select: none;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
     }
-
+    
     .ag-pill:hover {
-      background: rgba(30, 41, 59, 0.95);
-      border-color: rgba(99, 102, 241, 0.5);
-      transform: translateY(-2px);
-      box-shadow: 0 14px 28px -5px rgba(99, 102, 241, 0.25), 0 10px 12px -6px rgba(0, 0, 0, 0.4);
-    }
-
-    .ag-pill.active {
-      background: rgba(49, 46, 129, 0.92);
-      border-color: #818cf8;
-      box-shadow: 0 0 20px rgba(99, 102, 241, 0.4);
+      box-shadow: 0 8px 24px -4px rgba(0, 0, 0, 0.12);
+      transform: translateY(-1px);
     }
 
     .ag-pill-status {
       width: 10px;
       height: 10px;
       border-radius: 50%;
-      background: #10b981;
-      box-shadow: 0 0 8px #10b981;
+      background: #34c759;
+      box-shadow: 0 0 6px rgba(52, 199, 89, 0.5);
       transition: background 0.3s;
     }
 
     .ag-pill-status.disconnected {
-      background: #ef4444;
-      box-shadow: 0 0 8px #ef4444;
+      background: #ff3b30;
+      box-shadow: 0 0 6px rgba(255, 59, 48, 0.5);
     }
 
     .ag-pill.active .ag-pill-status {
-      background: #6366f1;
-      box-shadow: 0 0 10px #6366f1;
+      background: #007aff;
+      box-shadow: 0 0 8px rgba(0, 122, 255, 0.6);
       animation: ag-pulse 1.5s infinite;
     }
 
@@ -120,18 +125,17 @@
     }
 
     .ag-pill-label {
-      font-weight: 600;
-      letter-spacing: 0.3px;
+      font-weight: 500;
       display: flex;
       align-items: center;
       gap: 6px;
     }
 
     .ag-pill-badge {
-      background: #4f46e5;
+      background: #007aff;
       color: #fff;
       font-size: 10px;
-      font-weight: 700;
+      font-weight: 600;
       padding: 1px 6px;
       border-radius: 9999px;
       min-width: 18px;
@@ -139,13 +143,31 @@
     }
 
     .ag-pill-shortcut {
-      color: #94a3b8;
+      color: #6b7280;
       font-size: 11px;
       padding-left: 4px;
-      border-left: 1px solid rgba(255, 255, 255, 0.15);
+      border-left: 1px solid rgba(0, 0, 0, 0.1);
     }
 
-    /* Mode Toolbar (Floating next to Pill) */
+    .ag-pill-close {
+      margin-left: 6px;
+      margin-right: -4px;
+      width: 20px;
+      height: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 4px;
+      font-size: 14px;
+      color: #9ca3af;
+      transition: all 0.15s;
+    }
+    .ag-pill-close:hover {
+      background: #ff3b30;
+      color: #fff;
+    }
+
+    /* Mode Toolbar */
     .ag-toolbar {
       position: fixed;
       bottom: 74px;
@@ -153,13 +175,13 @@
       display: none;
       align-items: center;
       gap: 4px;
-      background: rgba(15, 23, 42, 0.92);
-      backdrop-filter: blur(16px);
-      -webkit-backdrop-filter: blur(16px);
-      border: 1px solid rgba(255, 255, 255, 0.15);
-      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.85);
+      backdrop-filter: blur(20px) saturate(180%);
+      -webkit-backdrop-filter: blur(20px) saturate(180%);
+      border: 1px solid rgba(0, 0, 0, 0.1);
+      border-radius: 10px;
       padding: 4px;
-      box-shadow: 0 12px 30px -5px rgba(0, 0, 0, 0.6);
+      box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.15);
       z-index: 2147483647;
       animation: ag-fade-up 0.2s ease-out;
     }
@@ -176,11 +198,11 @@
     .ag-tool-btn {
       background: transparent;
       border: 1px solid transparent;
-      color: #94a3b8;
+      color: #6b7280;
       padding: 6px 10px;
-      border-radius: 8px;
+      border-radius: 6px;
       font-size: 12px;
-      font-weight: 600;
+      font-weight: 500;
       cursor: pointer;
       display: flex;
       align-items: center;
@@ -189,18 +211,18 @@
     }
 
     .ag-tool-btn:hover {
-      color: #fff;
-      background: rgba(255, 255, 255, 0.08);
+      color: #111827;
+      background: rgba(0, 0, 0, 0.05);
     }
 
     .ag-tool-btn.active {
-      background: #4f46e5;
+      background: #007aff;
       color: #fff;
-      border-color: #6366f1;
-      box-shadow: 0 2px 8px rgba(79, 70, 229, 0.4);
+      border-color: #007aff;
+      box-shadow: 0 2px 8px rgba(0, 122, 255, 0.3);
     }
 
-    /* Full-Screen Drawing Layer for Area Markings */
+    /* Full-Screen Drawing Layer */
     .ag-draw-canvas {
       position: fixed;
       inset: 0;
@@ -216,45 +238,45 @@
     }
 
     .ag-shape-preview {
-      stroke: #38bdf8;
+      stroke: #007aff;
       stroke-width: 2;
       stroke-dasharray: 6 3;
-      fill: rgba(56, 189, 248, 0.15);
-      filter: drop-shadow(0 0 8px rgba(56, 189, 248, 0.5));
+      fill: rgba(0, 122, 255, 0.1);
+      filter: drop-shadow(0 0 4px rgba(0, 122, 255, 0.3));
     }
 
     .ag-draw-dims {
       position: fixed;
       pointer-events: none;
-      background: #0284c7;
+      background: #007aff;
       color: #fff;
       font-size: 11px;
-      font-weight: 700;
+      font-weight: 600;
       padding: 2px 6px;
       border-radius: 4px;
       z-index: 2147483645;
       display: none;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+      box-shadow: 0 2px 6px rgba(0,0,0,0.15);
     }
 
     /* Inspector Highlight Box */
     .ag-highlight-box {
       position: fixed;
       pointer-events: none;
-      border: 2px solid #6366f1;
-      background: rgba(99, 102, 241, 0.12);
+      border: 2px solid #007aff;
+      background: rgba(0, 122, 255, 0.08);
       border-radius: 3px;
       z-index: 2147483645;
       transition: all 0.08s ease-out;
       display: none;
-      box-shadow: 0 0 12px rgba(99, 102, 241, 0.35);
+      box-shadow: 0 0 8px rgba(0, 122, 255, 0.25);
     }
 
     .ag-highlight-tag {
       position: absolute;
       top: -26px;
       left: -2px;
-      background: #4f46e5;
+      background: #007aff;
       color: #ffffff;
       padding: 3px 8px;
       font-size: 11px;
@@ -264,20 +286,20 @@
       align-items: center;
       gap: 6px;
       white-space: nowrap;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+      box-shadow: 0 2px 6px rgba(0,0,0,0.2);
     }
 
     .ag-highlight-tag .ag-react-badge {
-      background: #7c3aed;
-      color: #e9d5ff;
+      background: #5856d6;
+      color: #fff;
       padding: 1px 5px;
       border-radius: 3px;
-      font-weight: 700;
+      font-weight: 600;
       font-size: 10px;
     }
 
     .ag-highlight-tag .ag-dims {
-      color: #c7d2fe;
+      color: rgba(255, 255, 255, 0.8);
       font-size: 10px;
       font-weight: 400;
     }
@@ -306,13 +328,13 @@
     }
 
     .ag-marker-badge {
-      background: #6366f1;
+      background: #007aff;
       color: #fff;
-      font-weight: 700;
+      font-weight: 600;
       font-size: 11px;
       padding: 4px 8px;
       border-radius: 9999px;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
       display: flex;
       align-items: center;
       gap: 4px;
@@ -320,14 +342,14 @@
     }
 
     .ag-marker-badge.resolved {
-      background: #10b981;
+      background: #34c759;
     }
 
     .ag-marker-shape {
       position: absolute;
       pointer-events: none;
-      border: 2px dashed #6366f1;
-      background: rgba(99, 102, 241, 0.1);
+      border: 2px dashed #007aff;
+      background: rgba(0, 122, 255, 0.05);
       border-radius: 8px;
     }
 
@@ -336,73 +358,83 @@
     }
 
     .ag-marker-shape.resolved {
-      border-color: #10b981;
-      background: rgba(16, 185, 129, 0.1);
+      border-color: #34c759;
+      background: rgba(52, 199, 89, 0.05);
     }
 
     /* Modal Overlay */
     .ag-modal-backdrop {
       position: fixed;
-      inset: 0;
-      background: rgba(15, 23, 42, 0.65);
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(15, 23, 42, 0.4);
       backdrop-filter: blur(8px);
-      -webkit-backdrop-filter: blur(8px);
+      z-index: 2147483646;
       display: flex;
       align-items: center;
       justify-content: center;
-      z-index: 2147483646;
       opacity: 0;
+      visibility: hidden;
       pointer-events: none;
-      transition: opacity 0.2s ease;
-      padding: 20px;
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
     }
 
     .ag-modal-backdrop.open {
       opacity: 1;
+      visibility: visible;
       pointer-events: auto;
     }
 
     .ag-modal {
-      background: #0f172a;
-      border: 1px solid rgba(255, 255, 255, 0.15);
-      border-radius: 16px;
-      width: 100%;
-      max-width: 580px;
+      background: #ffffff;
+      width: 90%;
+      max-width: 680px;
       max-height: 90vh;
-      overflow-y: auto;
-      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+      border-radius: 20px;
+      box-shadow: 0 24px 48px rgba(0, 0, 0, 0.12), 0 8px 16px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(0,0,0,0.04);
       display: flex;
       flex-direction: column;
-      transform: scale(0.96) translateY(8px);
-      transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      overflow: hidden;
+      transform: scale(0.96) translateY(10px);
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
     }
 
     .ag-modal-backdrop.open .ag-modal {
-      transform: scale(1) translateY(0);
+      background: #ffffff;
+      width: 90%;
+      max-width: 680px;
+      max-height: 90vh;
+      border-radius: 20px;
+      box-shadow: 0 24px 48px rgba(0, 0, 0, 0.12), 0 8px 16px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(0,0,0,0.04);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      transform: scale(0.96) translateY(10px);
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
     }
 
     .ag-modal-header {
       padding: 16px 20px;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      border-bottom: 1px solid rgba(0, 0, 0, 0.06);
       display: flex;
       align-items: center;
       justify-content: space-between;
-      background: rgba(30, 41, 59, 0.5);
+      background: rgba(255, 255, 255, 0.8);
     }
 
     .ag-modal-title {
+      font-size: 18px;
+      font-weight: 600;
+      color: #0f172a;
       display: flex;
       align-items: center;
       gap: 10px;
-      font-size: 15px;
-      font-weight: 700;
-      color: #f8fafc;
+      letter-spacing: -0.3px;
     }
 
     .ag-modal-close {
       background: transparent;
       border: none;
-      color: #94a3b8;
+      color: #6b7280;
       cursor: pointer;
       font-size: 18px;
       padding: 4px 8px;
@@ -411,26 +443,29 @@
     }
 
     .ag-modal-close:hover {
-      background: rgba(255, 255, 255, 0.1);
-      color: #fff;
+      background: rgba(0, 0, 0, 0.05);
+      color: #111827;
     }
 
     .ag-modal-body {
-      padding: 20px;
+      padding: 16px 24px;
       display: flex;
       flex-direction: column;
+      flex: 1 1 auto;
+      min-height: 0;
       gap: 16px;
+      overflow-y: auto;
     }
 
-    /* Element / Area Card */
     .ag-element-card {
-      background: #1e293b;
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      border-radius: 10px;
-      padding: 12px 14px;
+      background: #f8fafc;
+      border: 1px solid rgba(0, 0, 0, 0.04);
+      border-radius: 12px;
+      padding: 12px;
       display: flex;
       flex-direction: column;
-      gap: 8px;
+      gap: 10px;
+      box-shadow: inset 0 2px 4px rgba(0,0,0,0.01);
     }
 
     .ag-selector-row {
@@ -443,21 +478,21 @@
     .ag-selector-code {
       font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
       font-size: 11px;
-      color: #38bdf8;
-      background: #090d16;
-      padding: 5px 8px;
+      color: #0369a1;
+      background: #f0f9ff;
+      padding: 4px 6px;
       border-radius: 6px;
       overflow-x: auto;
       white-space: nowrap;
       flex: 1;
-      border: 1px solid rgba(56, 189, 248, 0.2);
+      border: 1px solid rgba(3, 105, 161, 0.1);
     }
 
     .ag-area-spatial-hint {
       font-size: 12px;
-      color: #cbd5e1;
-      background: #0b1120;
-      border: 1px solid rgba(56, 189, 248, 0.15);
+      color: #475569;
+      background: #f8fafc;
+      border: 1px solid rgba(0, 0, 0, 0.06);
       border-radius: 6px;
       padding: 8px 10px;
       line-height: 1.4;
@@ -468,21 +503,22 @@
       align-items: center;
       gap: 8px;
       font-size: 12px;
-      color: #c084fc;
+      color: #7e22ce;
     }
 
     .ag-react-badge-lg {
-      background: #6b21a8;
-      color: #f3e8ff;
-      font-weight: 700;
+      background: #f3e8ff;
+      color: #6b21a8;
+      font-weight: 600;
       padding: 2px 7px;
       border-radius: 4px;
       font-size: 11px;
+      border: 1px solid rgba(107, 33, 168, 0.1);
     }
 
     .ag-source-location {
       font-size: 11px;
-      color: #94a3b8;
+      color: #64748b;
       font-family: monospace;
     }
 
@@ -491,22 +527,23 @@
       display: grid;
       grid-template-columns: repeat(2, 1fr);
       gap: 6px;
-      background: #0b1120;
-      padding: 10px;
-      border-radius: 8px;
-      border: 1px solid rgba(255, 255, 255, 0.05);
+      background: #ffffff;
+      padding: 10px 12px;
+      border-radius: 10px;
+      border: 1px solid rgba(0, 0, 0, 0.05);
       font-size: 11px;
-      font-family: monospace;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.02);
     }
 
     .ag-style-item {
       display: flex;
       justify-content: space-between;
-      color: #94a3b8;
+      color: #64748b;
     }
 
     .ag-style-item span:last-child {
-      color: #e2e8f0;
+      color: #0f172a;
       font-weight: 500;
       max-width: 140px;
       overflow: hidden;
@@ -518,12 +555,12 @@
     .ag-html-snippet {
       font-family: monospace;
       font-size: 11px;
-      color: #cbd5e1;
-      background: #0b1120;
-      padding: 8px 10px;
+      color: #475569;
+      background: #f8fafc;
+      padding: 6px 8px;
       border-radius: 8px;
-      border: 1px solid rgba(255, 255, 255, 0.05);
-      max-height: 80px;
+      border: 1px solid rgba(0, 0, 0, 0.06);
+      max-height: 60px;
       overflow-y: auto;
       white-space: pre-wrap;
       word-break: break-all;
@@ -531,9 +568,9 @@
 
     /* Notes Input */
     .ag-input-label {
-      font-weight: 600;
+      font-weight: 500;
       font-size: 12px;
-      color: #cbd5e1;
+      color: #374151;
       display: flex;
       justify-content: space-between;
       align-items: center;
@@ -541,22 +578,24 @@
 
     .ag-textarea {
       width: 100%;
-      height: 90px;
-      background: #020617;
-      border: 1px solid rgba(255, 255, 255, 0.15);
-      border-radius: 8px;
-      padding: 10px 12px;
+      height: 80px;
+      background: #ffffff;
+      border: 1px solid rgba(0, 0, 0, 0.12);
+      border-radius: 10px;
+      padding: 10px 14px;
       font-family: inherit;
       font-size: 13px;
-      color: #fff;
+      color: #0f172a;
       resize: vertical;
       outline: none;
       transition: border-color 0.2s, box-shadow 0.2s;
+      line-height: 1.5;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.02);
     }
 
     .ag-textarea:focus {
-      border-color: #6366f1;
-      box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.25);
+      border-color: #007aff;
+      box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.15);
     }
 
     /* Tag Pills */
@@ -567,9 +606,9 @@
     }
 
     .ag-tag-btn {
-      background: #1e293b;
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      color: #94a3b8;
+      background: #f3f4f6;
+      border: 1px solid rgba(0, 0, 0, 0.05);
+      color: #4b5563;
       border-radius: 9999px;
       padding: 4px 10px;
       font-size: 11px;
@@ -578,51 +617,53 @@
     }
 
     .ag-tag-btn:hover {
-      background: #334155;
-      color: #fff;
+      background: #e5e7eb;
+      color: #111827;
     }
 
     .ag-tag-btn.selected {
-      background: #4338ca;
-      border-color: #6366f1;
-      color: #fff;
+      background: #eff6ff;
+      border-color: #007aff;
+      color: #007aff;
+      font-weight: 500;
     }
 
     /* Screenshot Snippet Section */
     .ag-screenshot-preview {
       display: flex;
       align-items: center;
-      gap: 12px;
-      background: #0b1120;
-      border: 1px solid rgba(255, 255, 255, 0.05);
-      border-radius: 8px;
-      padding: 8px 12px;
+      gap: 16px;
+      background: #ffffff;
+      border: 1px solid rgba(0, 0, 0, 0.05);
+      border-radius: 12px;
+      padding: 12px 16px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.02);
     }
 
     .ag-thumb-canvas {
       width: 48px;
       height: 48px;
       object-fit: contain;
-      background: #1e293b;
+      background: #ffffff;
       border-radius: 4px;
-      border: 1px solid rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(0, 0, 0, 0.1);
     }
 
     .ag-screenshot-text {
       font-size: 11px;
-      color: #94a3b8;
+      color: #64748b;
       flex: 1;
     }
 
     /* Modal Footer */
     .ag-modal-footer {
-      padding: 16px 20px;
-      border-top: 1px solid rgba(255, 255, 255, 0.1);
+      padding: 14px 20px;
+      border-top: 1px solid rgba(0, 0, 0, 0.06);
       display: flex;
       align-items: center;
       justify-content: flex-end;
       gap: 10px;
-      background: rgba(30, 41, 59, 0.3);
+      background: #f8fafc;
     }
 
     .ag-btn {
@@ -632,31 +673,33 @@
       font-weight: 600;
       cursor: pointer;
       border: none;
-      transition: all 0.2s;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      letter-spacing: -0.1px;
     }
 
     .ag-btn-secondary {
-      background: #334155;
-      color: #e2e8f0;
+      background: #f3f4f6;
+      color: #374151;
+      border: 1px solid rgba(0, 0, 0, 0.1);
     }
 
     .ag-btn-secondary:hover {
-      background: #475569;
-      color: #fff;
+      background: #e5e7eb;
     }
 
     .ag-btn-primary {
-      background: #4f46e5;
+      background: #007aff;
       color: #ffffff;
       display: flex;
       align-items: center;
-      gap: 6px;
-      box-shadow: 0 4px 12px rgba(79, 70, 229, 0.4);
+      gap: 8px;
+      box-shadow: 0 4px 12px rgba(0, 122, 255, 0.25);
     }
 
     .ag-btn-primary:hover {
-      background: #4338ca;
-      box-shadow: 0 6px 16px rgba(79, 70, 229, 0.5);
+      background: #006ae6;
+      box-shadow: 0 6px 16px rgba(0, 122, 255, 0.35);
+      transform: translateY(-1px);
     }
 
     .ag-btn-primary:disabled {
@@ -678,14 +721,14 @@
 
     .ag-toast {
       pointer-events: auto;
-      background: rgba(15, 23, 42, 0.95);
+      background: rgba(255, 255, 255, 0.95);
       backdrop-filter: blur(12px);
       -webkit-backdrop-filter: blur(12px);
-      border: 1px solid rgba(99, 102, 241, 0.4);
-      color: #fff;
+      border: 1px solid rgba(0, 0, 0, 0.1);
+      color: #111827;
       padding: 12px 18px;
       border-radius: 10px;
-      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.15);
       font-size: 13px;
       display: flex;
       align-items: center;
@@ -695,12 +738,11 @@
     }
 
     .ag-toast.success {
-      border-color: #10b981;
+      border-left: 4px solid #34c759;
     }
 
     .ag-toast.resolved {
-      border-color: #a855f7;
-      background: rgba(30, 15, 50, 0.95);
+      border-left: 4px solid #5856d6;
     }
 
     @keyframes ag-slide-in {
@@ -708,8 +750,8 @@
       to { transform: translateX(0); opacity: 1; }
     }
   `;
-  shadow.appendChild(styleSheet);
 
+  shadow.appendChild(styleSheet);
   // ==========================================
   // DOM Elements Inside Shadow Root
   // ==========================================
@@ -769,6 +811,7 @@
         <span class="ag-pill-badge" id="ag-badge" style="display:none;">0</span>
       </div>
       <div class="ag-pill-shortcut">Alt+Shift+X</div>
+      <div class="ag-pill-close" id="ag-pill-close" title="Turn Off Bridge">×</div>
     </div>
 
     <!-- Modal Backdrop & Dialog -->
@@ -1445,10 +1488,20 @@
 
     let payload = {};
 
+    const pageContext = {
+      url: window.location.href,
+      pathname: window.location.pathname,
+      search: window.location.search,
+      hash: window.location.hash,
+      title: document.title,
+      viewport: `${window.innerWidth}x${window.innerHeight}`
+    };
+
     if (currentAreaMarking) {
       // Area or Pin Marking
       payload = {
-        url: window.location.href,
+        url: window.location.href, // kept for backward compatibility
+        pageContext,
         selector: currentAreaMarking.containerSelector || 'window',
         outerHTML: `<!-- Area Marking: ${currentAreaMarking.shape.toUpperCase()} at (${currentAreaMarking.rect.x}, ${currentAreaMarking.rect.y}) -->`,
         computedStyles: {},
@@ -1469,7 +1522,8 @@
       }
 
       payload = {
-        url: window.location.href,
+        url: window.location.href, // kept for backward compatibility
+        pageContext,
         selector,
         outerHTML,
         computedStyles: styles,
@@ -1636,7 +1690,7 @@
   // ==========================================
   // Event Listeners
   // ==========================================
-  window.addEventListener('keydown', e => {
+  function onGlobalKeyDown(e) {
     if (e.altKey && e.shiftKey && (e.key === 'X' || e.key === 'x')) {
       e.preventDefault();
       toggleActive();
@@ -1646,12 +1700,39 @@
       e.preventDefault();
       submitFeedback();
     }
-  }, true);
+  }
+
+  window.addEventListener('keydown', onGlobalKeyDown, true);
+
+  // Shutdown completely
+  function shutdownBridge() {
+    isActive = false;
+    isModalOpen = false;
+    host.remove();
+    window.removeEventListener('keydown', onGlobalKeyDown, true);
+    window.removeEventListener('mousemove', onMouseMove, { capture: true, passive: true });
+    window.removeEventListener('click', onElementClick, { capture: true });
+    if (sseConnection) sseConnection.close();
+    
+    window.__ANTIGRAVITY_BRIDGE_INITIALIZED__ = false;
+    delete window.__ANTIGRAVITY_TOGGLE;
+    delete window.__ANTIGRAVITY_SHUTDOWN;
+    console.log('[MarkupBridge] Safely shut down.');
+  }
 
   // Expose for extension content.js to trigger directly
   window.__ANTIGRAVITY_TOGGLE = toggleActive;
+  window.__ANTIGRAVITY_SHUTDOWN = shutdownBridge;
 
-  pill.addEventListener('click', toggleActive);
+  pill.addEventListener('click', (e) => {
+    // Don't toggle if they clicked the close button
+    if (e.target.id === 'ag-pill-close') return;
+    toggleActive();
+  });
+  
+  const pillCloseBtn = shadow.getElementById('ag-pill-close');
+  pillCloseBtn.addEventListener('click', shutdownBridge);
+
   modalClose.addEventListener('click', closeModal);
   btnCancel.addEventListener('click', closeModal);
   btnReselect.addEventListener('click', () => {
@@ -1668,4 +1749,8 @@
   connectSSE();
 
   console.log('[MarkupBridge] Markup Bridge ready with Manual Marking (Box/Circle/Pin) & Element Inspector.');
-})();
+};
+
+if (typeof chrome === 'undefined' || !chrome.runtime || !chrome.runtime.id) {
+  window.__INIT_MARKUP_BRIDGE__();
+}

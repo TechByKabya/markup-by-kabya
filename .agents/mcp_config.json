@@ -1,8 +1,12 @@
 {
   "mcpServers": {
     "markup-bridge": {
-      "command": "node",
-      "args": ["/Users/kabya/Desktop/markup-by-kabya/bin/markup-bridge.js", "dual"],
+      "command": "npx",
+      "args": [
+        "-y",
+        "markup-by-kabya",
+        "dual"
+      ],
       "env": {
         "BRIDGE_API_BASE": "http://127.0.0.1:3005"
       }

@@ -235,10 +235,9 @@ export function createBridgeServer({
       new Promise((resolve, reject) => {
         server.listen(port, host, () => {
           if (!silent) {
-            console.log(`\n🚀 [MarkupBridge] Server running on http://${host}:${port}`);
-            console.log(`👉 Embed in your app: <script src="http://${host}:${port}/client.js"></script>`);
-            console.log(`👉 Test live demo: http://${host}:${port}/demo`);
-            console.log(`👉 MCP feedback queue: ${queue.storageFile}\n`);
+            console.log(`\n[MarkupBridge] Daemon active and listening on port ${port}`);
+            console.log(`[MarkupBridge] Feedback sync enabled for: ${queue.storageFile}`);
+            console.log(`[MarkupBridge] Press Ctrl+C to shut down.\n`);
           }
           resolve({ port, host, url: `http://${host}:${port}` });
         });
