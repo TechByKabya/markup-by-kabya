@@ -1,6 +1,6 @@
 {
   "name": "markup-bridge",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Bidirectional UI Visual Feedback Bridge for Antigravity via MCP",
   "main": "src/server/index.js",
   "exports": {
