@@ -150,7 +150,11 @@ export function createMcpServer({
           ? ` (${item.reactContext.source.file}:${item.reactContext.source.line})`
           : '';
         if (!src && item.url && item.url.startsWith('file://')) {
-          try { src = ` (${new URL(item.url).pathname})`; } catch (_) {}
+          try {
+            let p = new URL(item.url).pathname;
+            if (/^\/[a-zA-Z]:/.test(p)) p = p.slice(1);
+            src = ` (${decodeURIComponent(p)})`;
+          } catch (_) {}
         }
         // Include pre-digested action command for quick scanning
         const cmd = item.actionCommand ? `\n**Quick Action**: ${item.actionCommand.split('\n')[0]}` : '';
@@ -206,7 +210,9 @@ export function createMcpServer({
 
       if (item.url && item.url.startsWith('file://')) {
         try {
-          const directFile = new URL(item.url).pathname;
+          let directFile = new URL(item.url).pathname;
+          if (/^\/[a-zA-Z]:/.test(directFile)) directFile = directFile.slice(1);
+          directFile = decodeURIComponent(directFile);
           details += `## 🎯 Direct File Location\n`;
           details += `- **File on Disk**: \`${directFile}\`\n\n`;
         } catch (_) {}

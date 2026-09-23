@@ -424,11 +424,21 @@
 
       <div class="command-group">
         <div class="command-header">
-          <span class="command-title">Restart Server (Port 3005)</span>
+          <span class="command-title">Restart Server (macOS / Linux)</span>
         </div>
         <div class="command-box">
           <code id="cmd-restart">lsof -ti:3005 | xargs kill -9 && npx markup-bridge@latest</code>
           <button class="copy-btn" id="btn-copy-restart">Copy</button>
+        </div>
+      </div>
+
+      <div class="command-group">
+        <div class="command-header">
+          <span class="command-title">Restart Server (Windows)</span>
+        </div>
+        <div class="command-box">
+          <code id="cmd-restart-win">npx kill-port 3005 && npx markup-bridge@latest</code>
+          <button class="copy-btn" id="btn-copy-restart-win">Copy</button>
         </div>
       </div>
 

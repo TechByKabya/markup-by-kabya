@@ -67,7 +67,11 @@ function buildLegacyActionCommand(item) {
   if (sourceFile) {
     filePath = sourceLine ? `${sourceFile}:${sourceLine}` : sourceFile;
   } else if (item.url && item.url.startsWith('file://')) {
-    try { filePath = new URL(item.url).pathname; } catch (_) {}
+    try {
+      let p = new URL(item.url).pathname;
+      if (/^\/[a-zA-Z]:/.test(p)) p = p.slice(1);
+      filePath = decodeURIComponent(p);
+    } catch (_) {}
   }
 
   const lines = [];

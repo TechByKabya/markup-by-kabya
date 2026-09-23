@@ -1499,7 +1499,11 @@ window.__INIT_MARKUP_BRIDGE__ = function () {
     let location = '';
     if (file) location = `File: \`${file}${line ? `:${line}` : ''}\``;
     else if (payload.url && payload.url.startsWith('file://')) {
-      try { location = `File: \`${new URL(payload.url).pathname}\``; } catch (_) {}
+      try {
+        let p = new URL(payload.url).pathname;
+        if (/^\/[a-zA-Z]:/.test(p)) p = p.slice(1);
+        location = `File: \`${decodeURIComponent(p)}\``;
+      } catch (_) {}
     }
 
     const lines = [

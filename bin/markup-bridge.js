@@ -116,8 +116,9 @@ async function main() {
     } catch (e) {}
   }
   if (!mcpConfig.mcpServers) mcpConfig.mcpServers = {};
+  const npxCmd = process.platform === 'win32' ? 'npx.cmd' : 'npx';
   mcpConfig.mcpServers["markup-bridge"] = {
-    "command": "npx",
+    "command": npxCmd,
     "args": ["-y", "markup-bridge", "mcp"],
     "env": {
       "BRIDGE_API_BASE": "http://127.0.0.1:3005",
@@ -224,7 +225,9 @@ main().catch((err) => {
     console.log(`
 [MarkupBridge] Note: Bridge server is already running on http://127.0.0.1:3005.
 The server is active and ready to receive feedback.
-To force restart, run: lsof -ti:3005 | xargs kill -9 && npm run server
+To force restart:
+  macOS/Linux: lsof -ti:3005 | xargs kill -9 && npx markup-bridge@latest
+  Windows:     npx kill-port 3005 && npx markup-bridge@latest
 `);
     process.exit(0);
   }
