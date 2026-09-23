@@ -274,8 +274,12 @@ export function createMcpServer({
   // Tool 4: get_latest_ui_feedback
   // ─────────────────────────────────────────────────────────────────────────────
   server.tool('get_latest_ui_feedback', {}, async () => {
-    queue.init();
-    const item = queue.getLatestPending();
+    const pendingList = await fetchFeedbackList({ status: 'pending', limit: 1 });
+    let item = pendingList && pendingList.length > 0 ? pendingList[0] : null;
+    if (!item) {
+      queue.init();
+      item = queue.getLatestPending();
+    }
 
     if (!item) {
       return {
@@ -317,8 +321,7 @@ ${item.actionCommand || queue.generateActionCommand(item)}
         .describe("Target status: 'resolved' or 'dismissed'. Defaults to 'resolved'.")
     },
     async ({ id, resolutionNotes, status = 'resolved' }) => {
-      queue.init();
-      const existing = queue.getFeedback(id);
+      const existing = await fetchFeedback(id);
       if (!existing) {
         return {
           content: [{

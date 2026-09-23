@@ -881,6 +881,9 @@ window.__INIT_MARKUP_BRIDGE__ = function () {
         <div class="ag-modal-footer">
           <button class="ag-btn ag-btn-secondary" id="ag-btn-reselect">Re-pick</button>
           <button class="ag-btn ag-btn-secondary" id="ag-btn-cancel">Cancel</button>
+          <button class="ag-btn ag-btn-secondary" id="ag-btn-copy-prompt" title="Copy structured prompt to clipboard for Antigravity or any AI chat">
+            <span>📋 Copy Prompt</span>
+          </button>
           <button class="ag-btn ag-btn-primary" id="ag-btn-submit">
             <span>Send to Antigravity</span>
           </button>
@@ -926,6 +929,7 @@ window.__INIT_MARKUP_BRIDGE__ = function () {
   const btnSubmit = shadow.getElementById('ag-btn-submit');
   const btnCancel = shadow.getElementById('ag-btn-cancel');
   const btnReselect = shadow.getElementById('ag-btn-reselect');
+  const btnCopyPrompt = shadow.getElementById('ag-btn-copy-prompt');
   const toastsContainer = shadow.getElementById('ag-toasts');
 
   let selectedTag = 'styling';
@@ -1483,22 +1487,55 @@ window.__INIT_MARKUP_BRIDGE__ = function () {
   }
 
   // ==========================================
-  // Submit Feedback & Add Visual Marker Pin
   // ==========================================
-  async function submitFeedback() {
-    const notes = notesInput.value.trim();
-    if (!notes) {
-      notesInput.focus();
-      notesInput.style.borderColor = '#ef4444';
-      setTimeout(() => (notesInput.style.borderColor = ''), 1500);
-      return;
+  // Helper: Prompt Text Generator & Clipboard
+  // ==========================================
+  function buildPromptText(payload, id) {
+    const notes = payload.userNotes || 'No notes provided';
+    const sel = payload.selector || '';
+    const comp = payload.reactContext?.componentName;
+    const file = payload.reactContext?.source?.file;
+    const line = payload.reactContext?.source?.line;
+    let location = '';
+    if (file) location = `File: \`${file}${line ? `:${line}` : ''}\``;
+    else if (payload.url && payload.url.startsWith('file://')) {
+      try { location = `File: \`${new URL(payload.url).pathname}\``; } catch (_) {}
     }
 
-    btnSubmit.disabled = true;
-    btnSubmit.innerHTML = '<span>Sending...</span>';
+    const lines = [
+      `### UI Change Request ${id ? `[${id}]` : ''}`,
+      `Change: "${notes}"`,
+      comp ? `Component: \`<${comp} />\`` : null,
+      location || null,
+      sel ? `Selector: \`${sel}\`` : null,
+      `Action: Please apply this change to the codebase and verify the result.`
+    ].filter(Boolean);
 
-    let payload = {};
+    return lines.join('\n');
+  }
 
+  function copyTextToClipboard(text) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).catch(() => fallbackCopyText(text));
+    } else {
+      fallbackCopyText(text);
+    }
+  }
+
+  function fallbackCopyText(text) {
+    try {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+    } catch (_) {}
+  }
+
+  function buildCurrentPayload(notes) {
     const pageContext = {
       url: window.location.href,
       pathname: window.location.pathname,
@@ -1509,9 +1546,8 @@ window.__INIT_MARKUP_BRIDGE__ = function () {
     };
 
     if (currentAreaMarking) {
-      // Area or Pin Marking
-      payload = {
-        url: window.location.href, // kept for backward compatibility
+      return {
+        url: window.location.href,
         pageContext,
         selector: currentAreaMarking.containerSelector || 'window',
         outerHTML: `<!-- Area Marking: ${currentAreaMarking.shape.toUpperCase()} at (${currentAreaMarking.rect.x}, ${currentAreaMarking.rect.y}) -->`,
@@ -1523,7 +1559,6 @@ window.__INIT_MARKUP_BRIDGE__ = function () {
         screenshotSnippet: capturedScreenshotData
       };
     } else if (selectedElement) {
-      // Element Marking
       const selector = computeUniqueSelector(selectedElement);
       const reactCtx = getReactContext(selectedElement);
       const styles = getComputedStylesMap(selectedElement);
@@ -1532,8 +1567,8 @@ window.__INIT_MARKUP_BRIDGE__ = function () {
         outerHTML = outerHTML.slice(0, 397) + '...';
       }
 
-      payload = {
-        url: window.location.href, // kept for backward compatibility
+      return {
+        url: window.location.href,
         pageContext,
         selector,
         outerHTML,
@@ -1543,10 +1578,31 @@ window.__INIT_MARKUP_BRIDGE__ = function () {
         tag: selectedTag,
         screenshotSnippet: capturedScreenshotData
       };
-    } else {
-      btnSubmit.disabled = false;
+    }
+    return null;
+  }
+
+  // ==========================================
+  // Submit Feedback & Add Visual Marker Pin
+  // ==========================================
+  async function submitFeedback() {
+    const notes = notesInput.value.trim();
+    if (!notes) {
+      notesInput.focus();
+      notesInput.style.borderColor = '#ef4444';
+      setTimeout(() => (notesInput.style.borderColor = ''), 1500);
       return;
     }
+
+    const payload = buildCurrentPayload(notes);
+    if (!payload) return;
+
+    btnSubmit.disabled = true;
+    btnSubmit.innerHTML = '<span>Sending...</span>';
+
+    // Auto-copy prompt to clipboard as fallback
+    const promptText = buildPromptText(payload);
+    copyTextToClipboard(promptText);
 
     try {
       const res = await fetch(`${BRIDGE_API_BASE}/api/feedback`, {
@@ -1558,7 +1614,7 @@ window.__INIT_MARKUP_BRIDGE__ = function () {
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
 
-      showToast(`Feedback queued (#${data.id.slice(-4)})! Antigravity notified.`, 'success');
+      showToast(`Queued (#${data.id.slice(-4)})! In Antigravity type /markup to apply. (Prompt copied)`, 'success');
       pendingCount++;
       updateBadge();
 
@@ -1567,8 +1623,9 @@ window.__INIT_MARKUP_BRIDGE__ = function () {
 
       closeModal();
     } catch (err) {
-      console.error('[MarkupBridge] Failed to send feedback:', err);
-      showToast(`Bridge error: Unable to connect to ${BRIDGE_API_BASE}`, 'error');
+      console.warn('[MarkupBridge] Bridge server offline or unreachable:', err);
+      showToast('Bridge server offline. Prompt copied to clipboard! Paste into chat.', 'warning');
+      closeModal();
     } finally {
       btnSubmit.disabled = false;
       btnSubmit.innerHTML = '<span>Send to Antigravity</span>';
@@ -1753,6 +1810,21 @@ window.__INIT_MARKUP_BRIDGE__ = function () {
     setMode(currentMode);
   });
   btnSubmit.addEventListener('click', submitFeedback);
+  btnCopyPrompt.addEventListener('click', () => {
+    const notes = notesInput.value.trim();
+    if (!notes) {
+      notesInput.focus();
+      notesInput.style.borderColor = '#ef4444';
+      setTimeout(() => (notesInput.style.borderColor = ''), 1500);
+      return;
+    }
+    const payload = buildCurrentPayload(notes);
+    if (!payload) return;
+    const promptText = buildPromptText(payload);
+    copyTextToClipboard(promptText);
+    showToast('Prompt copied to clipboard! Paste into Antigravity or any AI.', 'success');
+    closeModal();
+  });
 
   window.addEventListener('mousemove', onMouseMove, { capture: true, passive: true });
   window.addEventListener('click', onElementClick, { capture: true });
