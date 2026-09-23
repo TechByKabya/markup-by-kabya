@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Markup Bridge - Dashboard</title>
+  <title>Markup Bridge - Setup & Workflow Guide</title>
   <style>
     :root {
       --bg: #fafafa;
@@ -16,7 +16,7 @@
       --primary-hover: #006ae6;
       --success: #34c759;
       --danger: #ff3b30;
-      --radius: 8px;
+      --radius: 10px;
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -28,15 +28,15 @@
       line-height: 1.5;
       font-size: 14px;
       -webkit-font-smoothing: antialiased;
-      padding: 60px 20px;
+      padding: 40px 20px 80px;
     }
 
     .container {
-      max-width: 680px;
+      max-width: 720px;
       margin: 0 auto;
       display: flex;
       flex-direction: column;
-      gap: 32px;
+      gap: 28px;
     }
 
     /* Header */
@@ -44,7 +44,7 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding-bottom: 24px;
+      padding-bottom: 20px;
       border-bottom: 1px solid var(--border);
     }
 
@@ -55,15 +55,15 @@
     }
 
     .logo {
-      width: 48px;
-      height: 48px;
-      border-radius: 12px;
+      width: 44px;
+      height: 44px;
+      border-radius: 10px;
       background: #fff;
       border: 1px solid var(--border);
       display: flex;
       align-items: center;
       justify-content: center;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.04);
     }
 
     .logo svg {
@@ -72,16 +72,26 @@
     }
 
     .title h1 {
-      font-size: 22px;
-      font-weight: 600;
-      letter-spacing: -0.5px;
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: -0.4px;
       color: var(--text);
     }
 
     .title p {
-      font-size: 14px;
+      font-size: 13px;
       color: var(--text-muted);
-      margin-top: 4px;
+      margin-top: 2px;
+    }
+
+    .badge-ver {
+      font-size: 12px;
+      color: var(--primary);
+      font-weight: 600;
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      padding: 3px 8px;
+      border-radius: 6px;
     }
 
     /* Status Banner */
@@ -122,7 +132,7 @@
     }
 
     .btn {
-      padding: 8px 16px;
+      padding: 8px 14px;
       border-radius: 6px;
       font-size: 13px;
       font-weight: 500;
@@ -138,7 +148,7 @@
       border-color: #d1d5db;
     }
 
-    /* Command Sections */
+    /* Cards / Sections */
     .section {
       background: var(--surface);
       border: 1px solid var(--border);
@@ -147,46 +157,77 @@
       box-shadow: 0 2px 8px rgba(0,0,0,0.02);
     }
 
-    .section h2 {
+    .section-title {
       font-size: 16px;
-      font-weight: 600;
-      margin-bottom: 8px;
+      font-weight: 700;
+      letter-spacing: -0.2px;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
     }
 
-    .section p {
-      font-size: 14px;
+    .section-desc {
+      font-size: 13px;
       color: var(--text-muted);
       margin-bottom: 20px;
+      line-height: 1.5;
     }
 
-    .command-group {
-      margin-bottom: 24px;
-    }
-
-    .command-group:last-child {
-      margin-bottom: 0;
-    }
-
-    .command-header {
+    /* Workflow Steps */
+    .workflow-steps {
       display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 6px;
+      flex-direction: column;
+      gap: 16px;
     }
 
-    .command-title {
+    .step-card {
+      display: flex;
+      gap: 16px;
+      padding: 16px;
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      align-items: flex-start;
+    }
+
+    .step-num {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: var(--primary);
+      color: #fff;
+      font-weight: 700;
       font-size: 13px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .step-body {
+      flex: 1;
+    }
+
+    .step-heading {
       font-weight: 600;
+      font-size: 14px;
+      color: var(--text);
+      margin-bottom: 4px;
+    }
+
+    .step-text {
+      font-size: 13px;
       color: var(--text-muted);
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
+      line-height: 1.5;
+      margin-bottom: 10px;
     }
 
     .command-box {
-      background: #f3f4f6;
+      background: #ffffff;
       border: 1px solid var(--border);
       border-radius: 6px;
-      padding: 12px 16px;
+      padding: 10px 14px;
       display: flex;
       justify-content: space-between;
       align-items: center;
@@ -195,7 +236,8 @@
     .command-box code {
       font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
       font-size: 13px;
-      color: #1f2937;
+      color: #0f172a;
+      font-weight: 500;
     }
 
     .copy-btn {
@@ -205,10 +247,23 @@
       font-weight: 600;
       color: var(--primary);
       cursor: pointer;
+      padding: 2px 6px;
+      border-radius: 4px;
     }
 
     .copy-btn:hover {
-      text-decoration: underline;
+      background: #eff6ff;
+    }
+
+    .highlight-pill {
+      display: inline-block;
+      background: #e0e7ff;
+      color: #3730a3;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 13px;
     }
 
     /* Preferences */
@@ -216,7 +271,7 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 16px 0;
+      padding: 14px 0;
       border-bottom: 1px solid var(--border);
     }
 
@@ -231,9 +286,9 @@
     }
 
     .pref-desc {
-      font-size: 13px;
+      font-size: 12px;
       color: var(--text-muted);
-      margin-top: 4px;
+      margin-top: 2px;
     }
 
     .toggle {
@@ -285,54 +340,104 @@
         </div>
         <div class="title">
           <h1>Markup Bridge</h1>
-          <p>Local UI Feedback Daemon</p>
+          <p>Visual UI Feedback Bridge for Antigravity & AI IDEs</p>
         </div>
       </div>
       <div>
-        <span style="font-size: 12px; color: var(--text-muted); font-weight: 500; background: #f3f4f6; padding: 4px 8px; border-radius: 4px;">v1.2.0</span>
+        <span class="badge-ver">v2.0.2</span>
       </div>
     </header>
 
-    <!-- Status -->
+    <!-- Status Banner -->
     <div class="status-banner">
       <div class="status-indicator">
         <div class="dot" id="status-dot"></div>
-        <span id="status-text">Checking daemon status...</span>
+        <span id="status-text">Checking bridge daemon status...</span>
       </div>
-      <button class="btn" id="btn-recheck">Refresh</button>
+      <button class="btn" id="btn-recheck">Check Status</button>
     </div>
 
-    <!-- Commands Section -->
+    <!-- The 3-Step Workflow Guide -->
     <section class="section">
-      <h2>CLI Commands</h2>
-      <p>Run these commands in your project terminal to manage the local daemon.</p>
+      <h2 class="section-title">🚀 How It Works (3 Simple Steps)</h2>
+      <p class="section-desc">Collect visual feedback in your browser, then let Antigravity implement the changes with a single command.</p>
 
-      <div class="command-group">
-        <div class="command-header">
-          <span class="command-title">Run (Foreground & Auto-Start Setup)</span>
-          <span style="font-size: 12px; color: var(--text-muted);">Ctrl+C to kill</span>
+      <div class="workflow-steps">
+        <!-- Step 1 -->
+        <div class="step-card">
+          <div class="step-num">1</div>
+          <div class="step-body">
+            <div class="step-heading">Start the Bridge Daemon</div>
+            <div class="step-text">Run this once in your project root terminal. It starts the local bridge server (port 3005) and configures Antigravity MCP tools automatically:</div>
+            <div class="command-box">
+              <code id="cmd-start">npx markup-bridge@latest</code>
+              <button class="copy-btn" id="btn-copy-start">Copy</button>
+            </div>
+          </div>
         </div>
-        <div class="command-box">
-          <code id="cmd-init">npx markup-bridge</code>
-          <button class="copy-btn" id="btn-copy-init">Copy</button>
+
+        <!-- Step 2 -->
+        <div class="step-card">
+          <div class="step-num">2</div>
+          <div class="step-body">
+            <div class="step-heading">Inspect & Submit in Browser</div>
+            <div class="step-text">
+              Press <kbd style="background:#fff;border:1px solid #cbd5e1;padding:1px 5px;border-radius:4px;font-size:12px;">Alt+Shift+X</kbd> or click the floating pill. Click any element or draw an area box, type your requested UI changes, and click <strong>Send to Antigravity</strong> (or <strong>📋 Copy Prompt</strong>).
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 3 -->
+        <div class="step-card" style="border: 1.5px solid #818cf8; background: #f5f3ff;">
+          <div class="step-num" style="background: #4f46e5;">3</div>
+          <div class="step-body">
+            <div class="step-heading" style="color: #312e81;">Execute in Antigravity Chat</div>
+            <div class="step-text" style="color: #4338ca;">
+              Open Antigravity IDE and in your chat prompt, simply type:
+            </div>
+            <div class="command-box" style="background:#ffffff; border-color: #c7d2fe;">
+              <code id="cmd-markup" style="color: #4338ca; font-weight: 700; font-size: 15px;">/markup</code>
+              <button class="copy-btn" id="btn-copy-markup" style="color: #4f46e5;">Copy</button>
+            </div>
+            <div style="font-size: 12px; color: #6366f1; margin-top: 8px;">
+              ✨ Antigravity will instantly read all pending UI changes, edit the files in your project, mark them resolved, and turn the browser pins green in real time!
+            </div>
+          </div>
         </div>
       </div>
+    </section>
 
-      <div class="command-group">
-        <div class="command-header">
-          <span class="command-title">Uninstall Background Daemon</span>
-          <span style="font-size: 12px; color: var(--text-muted);">Deletes config</span>
+    <!-- Additional Commands & Maintenance -->
+    <section class="section">
+      <h2 class="section-title">🛠️ Useful Commands</h2>
+      <p class="section-desc">Helpful commands for troubleshooting and managing your bridge server.</p>
+
+      <div class="workflow-steps">
+        <div>
+          <div style="font-size: 12px; font-weight: 600; color: var(--text-muted); margin-bottom: 6px; text-transform: uppercase;">
+            Restart Daemon (Clean Port 3005)
+          </div>
+          <div class="command-box">
+            <code id="cmd-restart">lsof -ti:3005 | xargs kill -9 && npx markup-bridge@latest</code>
+            <button class="copy-btn" id="btn-copy-restart">Copy</button>
+          </div>
         </div>
-        <div class="command-box">
-          <code id="cmd-remove">npx markup-bridge uninstall</code>
-          <button class="copy-btn" id="btn-copy-remove">Copy</button>
+
+        <div>
+          <div style="font-size: 12px; font-weight: 600; color: var(--text-muted); margin-bottom: 6px; text-transform: uppercase;">
+            Remove Project Integration
+          </div>
+          <div class="command-box">
+            <code id="cmd-remove">npx markup-bridge uninstall</code>
+            <button class="copy-btn" id="btn-copy-remove">Copy</button>
+          </div>
         </div>
       </div>
     </section>
 
     <!-- Preferences -->
     <section class="section">
-      <h2>Preferences</h2>
+      <h2 class="section-title">⚙️ Preferences</h2>
       
       <div class="pref-row">
         <div>
@@ -348,7 +453,7 @@
       <div class="pref-row">
         <div>
           <div class="pref-label">Daemon Port</div>
-          <div class="pref-desc">Local HTTP port used to communicate with the daemon.</div>
+          <div class="pref-desc">Local HTTP port used to communicate with the bridge daemon.</div>
         </div>
         <input type="number" id="pref-port" value="3005" style="width: 80px; padding: 6px 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 14px; font-family: monospace;">
       </div>

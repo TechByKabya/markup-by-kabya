@@ -26,7 +26,7 @@ async function checkBridgeHealth() {
     statusText.textContent = `Connected (Uptime: ${Math.round(data.uptime)}s)`;
   } catch (_) {
     statusDot.className = 'dot offline';
-    statusText.textContent = `Offline. Run 'npx markup-bridge server'`;
+    statusText.textContent = `Offline. Run 'npx markup-bridge@latest'`;
   }
 }
 
@@ -44,7 +44,9 @@ const setupCopy = (btnId, cmdId) => {
   });
 };
 
-setupCopy('btn-copy-init', 'cmd-init');
+setupCopy('btn-copy-start', 'cmd-start');
+setupCopy('btn-copy-markup', 'cmd-markup');
+setupCopy('btn-copy-restart', 'cmd-restart');
 setupCopy('btn-copy-remove', 'cmd-remove');
 
 // 3. Preferences Storage
