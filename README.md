@@ -22,6 +22,13 @@ Markup Bridge consists of three core components:
    - Implements the standard Model Context Protocol via Stdio.
    - Exposes tools for the Antigravity agent to query, list, and resolve the feedback queue natively.
 
+## Prerequisites
+
+Before running Markup Bridge, you must have the following installed on your machine:
+- **Node.js** (v18 or higher recommended) - [Download Here](https://nodejs.org/)
+
+Because the tool uses `npx`, Node.js is required to automatically fetch and execute the bridge server from the global NPM registry.
+
 ## Installation
 
 To initialize the daemon and install the necessary MCP configurations into your Antigravity workspace, run the following command in the root of your project:
