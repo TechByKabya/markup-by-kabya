@@ -78,13 +78,24 @@ async function main() {
         const items = JSON.parse(raw);
         const pending = Array.isArray(items) ? items.filter(i => i.status === 'pending') : [];
         if (pending.length > 0) {
-          const summary = pending.map(p => 
-            `- [${p.id}] ${p.reactContext?.componentName || p.selector}: "${p.userNotes}"`
-          ).join('\n');
+          const summary = pending.map((p, idx) => {
+            let targetFile = '';
+            if (p.reactContext?.source?.file) {
+              targetFile = p.reactContext.source.file;
+            } else if (p.url && p.url.startsWith('file://')) {
+              try { targetFile = new URL(p.url).pathname; } catch (_) {}
+            }
+            return `### Feedback Item [${idx + 1}] (ID: ${p.id})
+- **User Requested Change**: "${p.userNotes}"
+- **Target Selector**: \`${p.selector}\`
+${targetFile ? `- **Target File**: \`${targetFile}\`` : ''}
+${p.outerHTML ? `- **HTML Element to Edit**:\n\`\`\`html\n${p.outerHTML.slice(0, 300)}\n\`\`\`` : ''}`;
+          }).join('\n\n---\n\n');
+
           console.log(JSON.stringify({
             injectSteps: [
               {
-                ephemeralMessage: `📢 PENDING UI FEEDBACK from Browser:\n${summary}\n\nUse MCP tool get_ui_feedback or list_ui_feedback to inspect and resolve.`
+                ephemeralMessage: `📢 PENDING UI FEEDBACK from Browser:\n\n${summary}\n\nPlease open the target file above and apply the requested change directly.`
               }
             ]
           }));
