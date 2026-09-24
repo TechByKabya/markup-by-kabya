@@ -12,6 +12,7 @@ description: Zero-tool-call autonomous pair programming workflow for UI visual f
 ## When This Skill Activates
 
 This skill activates when you receive an **autoMessage** or **ephemeralMessage** containing:
+
 - `🎯 New UI feedback from browser` — fresh feedback, auto-execute immediately
 - `⏳ older pending UI feedback` — stale feedback, wait for user to confirm
 
@@ -24,6 +25,7 @@ This skill activates when you receive an **autoMessage** or **ephemeralMessage**
 If the autoMessage contains `File: \`path/to/file.tsx\`` — you have everything you need.
 
 **Do this:**
+
 1. **Open the file** at the specified path and line number
 2. **Apply the change** described in the action command
 3. Call `resolve_ui_feedback`:
@@ -69,9 +71,53 @@ If the action command mentions `Add new content in a marked area region`:
 
 ---
 
+### ✨ Case 4: Full-Page Clone / Design Capture (`tag: design-clone`)
+
+If the action command contains `🎯 FULL PAGE CLONE READY:` — the browser has **fully serialized the page DOM** and saved it to disk. This is not a text summary; it is the real rendered HTML with computed styles.
+
+**Protocol:**
+
+1. **Read the Design File** — find the `📄 Design File:` line in the action command. Call `view_file` on that absolute path:
+
+   ```
+   view_file("/absolute/path/to/.antigravity/designs/<slug>.html")
+   ```
+
+   This gives you the **complete serialized page**: all text, headings, navigation, section content, table rows, footer links, and computed CSS styles (colors, fonts, layout, border-radius, box-shadow, typography).
+
+2. **Analyze the file contents** — understand:
+   - The full page structure and section hierarchy
+   - All text content (verbatim — no placeholders allowed)
+   - Color values (exact hex/rgb from computed styles)
+   - Typography (font families, sizes, weights from computed styles)
+   - Layout system (flex/grid properties from computed styles)
+
+3. **Recreate the page** in the project's stack:
+   - Match the visual structure exactly
+   - Use the exact text and colors from the serialized file
+   - Apply responsive design and hover effects
+   - Zero placeholder text or lorem ipsum
+
+4. Call `resolve_ui_feedback`:
+   ```json
+   {
+     "id": "<feedback_id>",
+     "resolutionNotes": "Page recreated with 1:1 fidelity from serialized DOM capture",
+     "status": "resolved"
+   }
+   ```
+
+**Total tool calls: 2** (`view_file` on the design file + `resolve_ui_feedback`)
+
+> [!IMPORTANT]
+> The Design File path comes directly from the action command. Do NOT call `get_ui_feedback` to find it — it is already in the autoMessage. This saves ~400 tokens.
+
+---
+
 ## Resolving Multiple Items
 
 If multiple action commands are in the autoMessage, process them **sequentially** in the order listed. After each:
+
 - Edit the file
 - Call `resolve_ui_feedback` before moving to the next item
 
@@ -83,24 +129,24 @@ This ensures the browser sees real-time resolution toasts as each item completes
 
 Only use these tools if the above cases fail:
 
-| Tool | When to Use |
-|---|---|
-| `get_action_command` | Quick scan of all pending items without heavy data |
-| `list_ui_feedback` | Browse all pending items by status |
-| `get_ui_feedback({ id, includeStyles: false })` | Deep context without CSS dump (default) |
-| `get_ui_feedback({ id, includeStyles: true })` | When you specifically need computed styles |
-| `clear_ui_feedback` | Clean up after resolving a batch |
+| Tool                                            | When to Use                                        |
+| ----------------------------------------------- | -------------------------------------------------- |
+| `get_action_command`                            | Quick scan of all pending items without heavy data |
+| `list_ui_feedback`                              | Browse all pending items by status                 |
+| `get_ui_feedback({ id, includeStyles: false })` | Deep context without CSS dump (default)            |
+| `get_ui_feedback({ id, includeStyles: true })`  | When you specifically need computed styles         |
+| `clear_ui_feedback`                             | Clean up after resolving a batch                   |
 
 ---
 
 ## Token Budget Guidelines
 
-| Action | Approx Token Cost |
-|---|---|
-| Reading autoMessage ActionCommand | ~50 |
-| `get_action_command` tool call | ~100 |
-| `get_ui_feedback` (no styles) | ~400 |
-| `get_ui_feedback` (with styles) | ~1200 |
-| `list_ui_feedback` | ~300 per 10 items |
+| Action                            | Approx Token Cost |
+| --------------------------------- | ----------------- |
+| Reading autoMessage ActionCommand | ~50               |
+| `get_action_command` tool call    | ~100              |
+| `get_ui_feedback` (no styles)     | ~400              |
+| `get_ui_feedback` (with styles)   | ~1200             |
+| `list_ui_feedback`                | ~300 per 10 items |
 
 **Target: implement any simple style/text/layout change in under 500 tokens total.**

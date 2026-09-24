@@ -25,7 +25,7 @@ call_mcp_tool({
   "Arguments": { "limit": 10 }
 })
 ```
-Or call `list_ui_feedback` if you need detailed metadata.
+Or call `list_ui_feedback` for deep metadata.
 
 ### Step 2: Batch and Apply Code Changes
 For each pending item:

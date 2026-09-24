@@ -89,6 +89,18 @@ async function main() {
   }
 
   if (command === 'mcp') {
+    // Auto-start bridge HTTP server silently on port 3005 if not already active,
+    // ensuring Chrome Extension can communicate seamlessly whenever Antigravity is open.
+    try {
+      const bridge = createBridgeServer({
+        ...options,
+        storageDir: process.env.MARKUP_BRIDGE_STORAGE || path.resolve(process.cwd(), '.antigravity'),
+        silent: true
+      });
+      await bridge.start();
+    } catch (_) {
+      // Port in use or other instance running is fine — proceed with MCP
+    }
     const mcp = createMcpServer();
     await mcp.startStdio();
     return;
@@ -116,15 +128,28 @@ async function main() {
     } catch (e) {}
   }
   if (!mcpConfig.mcpServers) mcpConfig.mcpServers = {};
+  const localBin = path.resolve(process.cwd(), 'bin', 'markup-bridge.js');
+  const localCheck = path.resolve(process.cwd(), 'bin', 'check-pending.js');
+  const isLocalRepo = fs.existsSync(localBin);
   const npxCmd = process.platform === 'win32' ? 'npx.cmd' : 'npx';
-  mcpConfig.mcpServers["markup-bridge"] = {
-    "command": npxCmd,
-    "args": ["-y", "markup-bridge", "mcp"],
-    "env": {
-      "BRIDGE_API_BASE": "http://127.0.0.1:3005",
-      "MARKUP_BRIDGE_STORAGE": path.resolve(process.cwd(), '.antigravity')
-    }
-  };
+
+  mcpConfig.mcpServers["markup-bridge"] = isLocalRepo
+    ? {
+        "command": "node",
+        "args": [localBin, "mcp"],
+        "env": {
+          "BRIDGE_API_BASE": "http://127.0.0.1:3005",
+          "MARKUP_BRIDGE_STORAGE": path.resolve(process.cwd(), '.antigravity')
+        }
+      }
+    : {
+        "command": npxCmd,
+        "args": ["-y", "markup-bridge@latest", "mcp"],
+        "env": {
+          "BRIDGE_API_BASE": "http://127.0.0.1:3005",
+          "MARKUP_BRIDGE_STORAGE": path.resolve(process.cwd(), '.antigravity')
+        }
+      };
   fs.writeFileSync(mcpConfigPath, JSON.stringify(mcpConfig, null, 2));
 
   // 1b. Configure Lifecycle Hook (Auto-detects pending feedback on next chat message)
@@ -139,7 +164,7 @@ async function main() {
     "PreInvocation": [
       {
         "type": "command",
-        "command": "npx -y markup-bridge check",
+        "command": isLocalRepo ? `node "${localCheck}"` : "npx -y markup-bridge@latest check",
         "timeout": 5
       }
     ]
@@ -206,8 +231,57 @@ Provide a concise summary listing each feedback ID, what file was modified, and 
 `;
   fs.writeFileSync(skillFile, skillContent, 'utf8');
 
-  // 2. Start the foreground server immediately so it works right now
-  const bridge = createBridgeServer(options);
+  // 2. Start foreground server or attach to existing daemon for this project
+  const targetStorageDir = path.resolve(process.cwd(), '.antigravity');
+  const port = options.port || 3005;
+  const baseUrl = `http://${options.host || '127.0.0.1'}:${port}`;
+
+  // Check if an existing daemon is active on this port
+  let attached = false;
+  try {
+    const res = await fetch(`${baseUrl}/api/storage-dir`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ storageDir: targetStorageDir }),
+      signal: AbortSignal.timeout(1500)
+    });
+    if (res.ok) {
+      attached = true;
+      console.log(`\n✨ [MarkupBridge] Connected to active daemon on ${baseUrl}`);
+      console.log(`📁 [MarkupBridge] Active project: ${process.cwd()}`);
+      console.log(`💾 [MarkupBridge] Target storage: ${targetStorageDir}`);
+      console.log(`🚀 [MarkupBridge] Ready! Feedback & design clones from Chrome will be saved here.\n`);
+    }
+  } catch (_) {}
+
+  if (attached) {
+    console.log(`[MarkupBridge] Daemon is listening on ${baseUrl} (Press Ctrl+C to disconnect)\n`);
+    process.on('SIGINT', () => {
+      console.log('\n[MarkupBridge] Disconnected from daemon.');
+      process.exit(0);
+    });
+    process.on('SIGTERM', () => process.exit(0));
+    // Keep alive in foreground so user sees it running in terminal
+    await new Promise(() => {});
+    return;
+  }
+
+  // If port is occupied by an older/incompatible daemon, clean it up so user never gets stuck
+  try {
+    const { execSync } = await import('node:child_process');
+    const healthCheck = await fetch(`${baseUrl}/health`, { signal: AbortSignal.timeout(1000) }).catch(() => null);
+    if (healthCheck) {
+      console.log(`[MarkupBridge] Reclaiming port ${port} from older daemon...`);
+      if (process.platform === 'win32') {
+        try { execSync(`npx -y kill-port ${port}`, { stdio: 'ignore' }); } catch (_) {}
+      } else {
+        try { execSync(`lsof -ti:${port} | xargs kill -9 2>/dev/null`, { stdio: 'ignore' }); } catch (_) {}
+      }
+      await new Promise(r => setTimeout(r, 600));
+    }
+  } catch (_) {}
+
+  const bridge = createBridgeServer({ ...options, storageDir: targetStorageDir });
   await bridge.start();
 
   const shutdown = () => {
@@ -220,16 +294,21 @@ Provide a concise summary listing each feedback ID, what file was modified, and 
   process.on('SIGTERM', shutdown);
 }
 
-main().catch((err) => {
+main().catch(async (err) => {
   if (err.code === 'EADDRINUSE') {
-    console.log(`
-[MarkupBridge] Note: Bridge server is already running on http://127.0.0.1:3005.
-The server is active and ready to receive feedback.
-To force restart:
-  macOS/Linux: lsof -ti:3005 | xargs kill -9 && npx markup-bridge@latest
-  Windows:     npx kill-port 3005 && npx markup-bridge@latest
-`);
-    process.exit(0);
+    // Port conflict fallback: auto-clean and restart
+    try {
+      const { execSync } = await import('node:child_process');
+      if (process.platform === 'win32') {
+        try { execSync(`npx -y kill-port 3005`, { stdio: 'ignore' }); } catch (_) {}
+      } else {
+        try { execSync(`lsof -ti:3005 | xargs kill -9 2>/dev/null`, { stdio: 'ignore' }); } catch (_) {}
+      }
+      await new Promise(r => setTimeout(r, 500));
+      const bridge = createBridgeServer({ storageDir: path.resolve(process.cwd(), '.antigravity') });
+      await bridge.start();
+      return;
+    } catch (_) {}
   }
   console.error('[MarkupBridge Fatal]:', err);
   process.exit(1);

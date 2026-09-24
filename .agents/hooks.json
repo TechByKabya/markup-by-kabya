@@ -3,7 +3,7 @@
     "PreInvocation": [
       {
         "type": "command",
-        "command": "npx -y markup-bridge check",
+        "command": "node \"/Users/kabya/Desktop/markup-by-kabya/bin/check-pending.js\"",
         "timeout": 5
       }
     ]

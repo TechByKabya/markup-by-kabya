@@ -46,8 +46,10 @@ const setupCopy = (btnId, cmdId) => {
 
 setupCopy('btn-copy-start', 'cmd-start');
 setupCopy('btn-copy-markup', 'cmd-markup');
-setupCopy('btn-copy-restart', 'cmd-restart');
-setupCopy('btn-copy-restart-win', 'cmd-restart-win');
+setupCopy('btn-copy-cache-mac', 'cmd-cache-mac');
+setupCopy('btn-copy-cache-win', 'cmd-cache-win');
+setupCopy('btn-copy-switch', 'cmd-switch');
+setupCopy('btn-copy-health', 'cmd-health');
 setupCopy('btn-copy-remove', 'cmd-remove');
 
 // 3. Preferences Storage

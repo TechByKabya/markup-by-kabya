@@ -4,18 +4,29 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { FeedbackQueue } from './queue.js';
 import { SSEManager } from './sse.js';
+import { generateSlug, writeDesignFile, listDesigns } from './design-store.js';
+
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const ROOT_DIR = path.resolve(__dirname, '../../');
 
+// Storage dir resolution:
+//   1. MARKUP_BRIDGE_STORAGE env var — always set by mcp_config.json in MCP daemon mode
+//   2. process.cwd()/.antigravity — correct for normal `npx markup-bridge` terminal use
+//      (cwd = user's project folder when run from terminal)
+const DEFAULT_STORAGE_DIR =
+  process.env.MARKUP_BRIDGE_STORAGE ||
+  path.resolve(process.cwd(), '.antigravity');
+
 export function createBridgeServer({
   port = 3005,
   host = '127.0.0.1',
-  storageDir = path.resolve(process.cwd(), '.antigravity'),
+  storageDir = DEFAULT_STORAGE_DIR,
   silent = false
 } = {}) {
-  const queue = new FeedbackQueue(storageDir);
+  let activeStorageDir = path.resolve(storageDir);
+  const queue = new FeedbackQueue(activeStorageDir);
   const sse = new SSEManager();
 
   // Forward queue events to SSE
@@ -78,6 +89,7 @@ export function createBridgeServer({
         sendJson(res, 200, {
           status: 'ok',
           uptime: process.uptime(),
+          storageDir: activeStorageDir,
           pendingCount: queue.listFeedback({ status: 'pending' }).length,
           totalCount: queue.items.length,
           sseClients: sse.getClientCount()
@@ -85,7 +97,102 @@ export function createBridgeServer({
         return;
       }
 
-      // 4. Feedback Endpoints
+      // Dynamic Storage Directory (switch project on-the-fly without port conflicts)
+      if (req.method === 'POST' && pathname === '/api/storage-dir') {
+        const body = await parseJsonBody(req);
+        if (body && body.storageDir && typeof body.storageDir === 'string') {
+          activeStorageDir = path.resolve(body.storageDir);
+          queue.setStorageDir(activeStorageDir);
+          if (!silent) {
+            console.log(`📁 [MarkupBridge] Storage directory switched to: ${activeStorageDir}`);
+          }
+          sendJson(res, 200, { ok: true, storageDir: activeStorageDir });
+          return;
+        }
+        sendJson(res, 400, { error: 'storageDir (string) is required' });
+        return;
+      }
+
+      if (req.method === 'GET' && pathname === '/api/storage-dir') {
+        sendJson(res, 200, { storageDir: activeStorageDir });
+        return;
+      }
+
+      // 4. Design Capture Endpoint
+      // POST /api/design-capture — receives full serialized HTML from the DOM Serializer Engine
+      // Writes to .antigravity/designs/<slug>.html atomically, then creates a queue item
+      // containing ONLY the file path reference (not the HTML) to keep the queue lightweight.
+      if (req.method === 'POST' && pathname === '/api/design-capture') {
+        const body = await parseJsonBody(req);
+        if (body && body.__payloadTooLarge) {
+          sendJson(res, 413, { error: 'Payload too large: design capture exceeds 50MB limit' });
+          return;
+        }
+        if (!body || !body.html || typeof body.html !== 'string') {
+          sendJson(res, 400, { error: 'Invalid body: html (string) is required' });
+          return;
+        }
+
+        const { html, url = '', title = 'Captured Page', metadata = {} } = body;
+
+        // Generate a unique slug for this capture
+        const slug = generateSlug(url, new Date());
+
+        // Atomically write the serialized HTML to .antigravity/designs/<slug>.html
+        let writeResult;
+        try {
+          writeResult = await writeDesignFile(activeStorageDir, slug, html);
+        } catch (writeErr) {
+          if (!silent) console.error('[MarkupBridge] Failed to write design file:', writeErr);
+          sendJson(res, 500, { error: 'Failed to write design file', message: writeErr.message });
+          return;
+        }
+
+        // Create a queue item with the file PATH only (not the HTML content)
+        // This keeps the queue lightweight and prevents context overflow for Antigravity.
+        const feedback = queue.addFeedback({
+          tag: 'design-clone',
+          selector: 'body',
+          url,
+          pageTitle: title,
+          userNotes: `Recreate full page design for "${title}" (${url})`,
+          designFilePath: writeResult.filePath,
+          designMetadata: {
+            slug,
+            sourceUrl: url,
+            pageTitle: title,
+            capturedAt: metadata.capturedAt || new Date().toISOString(),
+            viewport: metadata.viewport || 'unknown',
+            estimatedNodes: metadata.estimatedNodes || 0,
+            fileSizeBytes: writeResult.fileSizeBytes,
+            detectedStack: metadata.detectedStack || [],
+            fallback: metadata.fallback || false,
+          },
+        });
+
+        if (!silent) {
+          const kbSize = Math.round(writeResult.fileSizeBytes / 1024);
+          console.log(`📸 [MarkupBridge] Design captured: ${title} → ${writeResult.filePath} (${kbSize} KB, #${feedback.id.slice(-6)})`);
+        }
+
+        sendJson(res, 201, {
+          id: feedback.id,
+          slug,
+          designFilePath: writeResult.filePath,
+          fileSizeBytes: writeResult.fileSizeBytes,
+          actionCommand: feedback.actionCommand,
+        });
+        return;
+      }
+
+      // GET /api/design-capture — list all saved design captures
+      if (req.method === 'GET' && pathname === '/api/design-capture') {
+        const designs = listDesigns(activeStorageDir);
+        sendJson(res, 200, { designs, count: designs.length });
+        return;
+      }
+
+      // 5. Feedback Endpoints
       // POST /api/feedback
       if (req.method === 'POST' && pathname === '/api/feedback') {
         const body = await parseJsonBody(req);
@@ -95,7 +202,9 @@ export function createBridgeServer({
         }
 
         const feedback = queue.addFeedback(body);
-        console.log(`📥 [MarkupBridge] Feedback received: ${feedback.selector} - "${feedback.userNotes}" (#${feedback.id.slice(-6)})`);
+        if (!silent) {
+          console.log(`📥 [MarkupBridge] Feedback received: ${feedback.selector} - "${feedback.userNotes}" (#${feedback.id.slice(-6)})`);
+        }
         sendJson(res, 201, feedback);
         return;
       }
@@ -173,7 +282,9 @@ export function createBridgeServer({
           if (!updated) {
             sendJson(res, 404, { error: `Feedback item ${id} not found` });
           } else {
-            console.log(`✅ [MarkupBridge] Feedback ${id} updated: status=${updated.status} ("${updated.resolutionNotes || ''}")`);
+            if (!silent) {
+              console.log(`✅ [MarkupBridge] Feedback ${id} updated: status=${updated.status} ("${updated.resolutionNotes || ''}")`);
+            }
             sendJson(res, 200, updated);
           }
           return;
@@ -284,17 +395,20 @@ export function createBridgeServer({
   };
 }
 
-function parseJsonBody(req) {
+function parseJsonBody(req, maxBytes = 50 * 1024 * 1024) {
   return new Promise((resolve) => {
     let raw = '';
+    let exceeded = false;
     req.on('data', (chunk) => {
+      if (exceeded) return;
       raw += chunk;
-      if (raw.length > 5 * 1024 * 1024) {
-        req.destroy(); // Prevent flood
-        resolve(null);
+      if (raw.length > maxBytes) {
+        exceeded = true;
+        resolve({ __payloadTooLarge: true });
       }
     });
     req.on('end', () => {
+      if (exceeded) return;
       if (!raw) return resolve({});
       try {
         resolve(JSON.parse(raw));

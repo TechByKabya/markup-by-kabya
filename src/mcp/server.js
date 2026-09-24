@@ -8,9 +8,9 @@ import { FeedbackQueue } from '../server/queue.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Storage dir resolution priority:
-//   1. MARKUP_BRIDGE_STORAGE env var (explicit, cross-project safe)
-//   2. CWD/.antigravity (default, works when CWD = project root)
+// Storage dir resolution:
+//   1. MARKUP_BRIDGE_STORAGE env var — always set by mcp_config.json in MCP daemon mode
+//   2. process.cwd()/.antigravity — correct for normal `npx markup-bridge` terminal use
 const STORAGE_DIR = process.env.MARKUP_BRIDGE_STORAGE
   || path.resolve(process.cwd(), '.antigravity');
 

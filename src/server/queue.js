@@ -1,8 +1,15 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
+// Storage dir resolution:
+//   1. MARKUP_BRIDGE_STORAGE env var — always set by mcp_config.json in MCP daemon mode
+//   2. process.cwd()/.antigravity — correct for normal `npx markup-bridge` terminal use
+const DEFAULT_STORAGE_DIR =
+  process.env.MARKUP_BRIDGE_STORAGE ||
+  path.resolve(process.cwd(), '.antigravity');
+
 export class FeedbackQueue {
-  constructor(storageDir = path.resolve(process.cwd(), '.antigravity')) {
+  constructor(storageDir = DEFAULT_STORAGE_DIR) {
     this.storageDir = storageDir;
     this.storageFile = path.join(this.storageDir, 'ui_feedback_queue.json');
     this.items = [];
@@ -32,6 +39,22 @@ export class FeedbackQueue {
       console.error('[FeedbackQueue] Error initializing queue:', err.message);
       this.items = [];
     }
+  }
+
+  setStorageDir(newStorageDir) {
+    if (this._persistTimer) {
+      clearTimeout(this._persistTimer);
+      this._persistTimer = null;
+      try {
+        if (this.storageDir && fs.existsSync(this.storageDir)) {
+          fs.writeFileSync(this.storageFile, JSON.stringify(this.items, null, 2), 'utf8');
+        }
+      } catch (_) {}
+    }
+    this.storageDir = path.resolve(newStorageDir);
+    this.storageFile = path.join(this.storageDir, 'ui_feedback_queue.json');
+    this.items = [];
+    this.init();
   }
 
   /**
@@ -112,6 +135,47 @@ export class FeedbackQueue {
       ? `"${item.userNotes}"`
       : 'UI modification requested (no notes provided)';
 
+    // Design Clone Request — True DOM Serializer Protocol
+    // The serialized HTML is stored on disk; the action command tells Antigravity
+    // to call view_file on the design file path to read the full page structure.
+    if (item.tag === 'design-clone') {
+      const meta = item.designMetadata || {};
+      const title = meta.pageTitle || item.pageTitle || 'Captured Page';
+      const sourceUrl = meta.sourceUrl || item.url || 'unknown';
+      const capturedAt = meta.capturedAt ? new Date(meta.capturedAt).toLocaleString() : 'unknown';
+      const viewport = meta.viewport || 'unknown';
+      const nodes = meta.estimatedNodes || 0;
+      const kbSize = meta.fileSizeBytes ? Math.round(meta.fileSizeBytes / 1024) : '?';
+      const stack = (meta.detectedStack || []).join(', ') || 'Unknown';
+      const fallbackNote = meta.fallback ? ' [fallback mode: assets linked, not inlined]' : '';
+
+      lines.push(`🎯 FULL PAGE CLONE READY: "${title}"`);
+      lines.push(`Source: ${sourceUrl}`);
+      lines.push(`Captured: ${capturedAt} | Viewport: ${viewport} | ${nodes} nodes | ${kbSize} KB | Stack: ${stack}${fallbackNote}`);
+
+      if (item.designFilePath) {
+        lines.push('');
+        lines.push(`📄 Design File: \`${item.designFilePath}\``);
+        lines.push('');
+        lines.push('INSTRUCTIONS:');
+        lines.push(`1. Call view_file on the Design File path above to read the complete`);
+        lines.push(`   HTML structure, text content, colors, layout, and component hierarchy.`);
+        lines.push(`2. Recreate this page in production-quality code matching the project stack.`);
+        lines.push(`3. Preserve ALL real content: headings, body text, navigation, tables, footer.`);
+        lines.push(`4. Translate computed CSS styles into the project's styling system.`);
+        lines.push(`   Do NOT use placeholder colors, fonts, or lorem ipsum.`);
+        lines.push(`5. After implementation, call resolve_ui_feedback({ id: "${item.id}", resolutionNotes: "..." })`);
+      } else {
+        // Fallback: no file path (server was offline when captured)
+        lines.push(change);
+        lines.push(`→ Recreate this page in the codebase, then call resolve_ui_feedback({ id: "${item.id}", resolutionNotes: "Implemented page redesign" })`);
+      }
+
+      lines.push('');
+      lines.push(`Feedback ID: \`${item.id}\``);
+      return lines.join('\n');
+    }
+
     // Component / target
     const component = item.reactContext?.componentName || null;
     const sourceFile = item.reactContext?.source?.file || null;
@@ -169,6 +233,10 @@ export class FeedbackQueue {
       reactContext: data.reactContext || null,
       userNotes: (data.userNotes || '').trim(),
       tag: data.tag || 'general',
+      pageTitle: data.pageTitle || data.pageContext?.title || '',
+      // Design Clone fields — file path reference instead of inline HTML/blueprint
+      designFilePath: data.designFilePath || null,
+      designMetadata: data.designMetadata || null,
       screenshotSnippet: data.screenshotSnippet || null,
       areaMarking: data.areaMarking || null,
       resolutionNotes: null,

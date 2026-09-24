@@ -356,11 +356,11 @@
         </div>
         <div class="title">
           <h1>Markup Bridge</h1>
-          <p>Visual UI feedback bridge for Antigravity</p>
+          <p>Production visual UI feedback & full-page design cloner for Antigravity</p>
         </div>
       </div>
       <div>
-        <span class="badge-ver">v2.0.3</span>
+        <span class="badge-ver">v2.1.3</span>
       </div>
     </header>
 
@@ -375,18 +375,21 @@
 
     <!-- Workflow Section -->
     <section class="section">
-      <h2>Workflow</h2>
-      <p class="section-desc">Submit visual feedback in the browser and apply it in Antigravity.</p>
+      <h2>How It Works</h2>
+      <p class="section-desc">Zero-touch workflow connecting your live browser to Antigravity via MCP.</p>
 
       <div class="step-list">
         <div class="step-item">
           <div class="step-index">1</div>
           <div class="step-content">
-            <div class="step-title">Start the bridge server</div>
-            <div class="step-desc">Run this command in your project terminal:</div>
+            <div class="step-title">Start the bridge in your project</div>
+            <div class="step-desc">Open your project terminal and run:</div>
             <div class="command-box">
-              <code id="cmd-start">npx markup-bridge@latest</code>
+              <code id="cmd-start">npx -y markup-bridge@latest</code>
               <button class="copy-btn" id="btn-copy-start">Copy</button>
+            </div>
+            <div style="font-size:12px;color:var(--text-muted);margin-top:6px;">
+              Configures Antigravity MCP tools, sets the target project storage, and starts the live sync daemon on port 3005.
             </div>
           </div>
         </div>
@@ -394,9 +397,23 @@
         <div class="step-item">
           <div class="step-index">2</div>
           <div class="step-content">
-            <div class="step-title">Select element and submit</div>
+            <div class="step-title">Capture in your browser</div>
             <div class="step-desc">
-              Open your webpage, press <kbd>Alt</kbd> + <kbd>Shift</kbd> + <kbd>X</kbd>, click any element, enter your notes, and click <strong>Send to Antigravity</strong>.
+              Browse to any website and choose your action:
+            </div>
+            <div style="display:flex;flex-direction:column;gap:8px;margin-top:4px;">
+              <div style="background:#f8fafc;border:1px solid var(--border);border-radius:6px;padding:10px 12px;">
+                <strong style="color:var(--text);font-size:12px;">🎯 Full Page Clone ("Copy Design"):</strong>
+                <p style="font-size:12px;color:var(--text-muted);margin-top:3px;">
+                  Click <strong>Copy Design</strong> in the floating pill. The DOM Serializer Engine extracts the complete HTML, stylesheets, computed styles, SVGs, and fonts into <code>.antigravity/designs/</code>. Antigravity reads this file to recreate the page in 1:1 fidelity!
+                </p>
+              </div>
+              <div style="background:#f8fafc;border:1px solid var(--border);border-radius:6px;padding:10px 12px;">
+                <strong style="color:var(--text);font-size:12px;">📌 Visual Element Feedback:</strong>
+                <p style="font-size:12px;color:var(--text-muted);margin-top:3px;">
+                  Press <kbd>Alt</kbd> + <kbd>Shift</kbd> + <kbd>X</kbd>, click any element, enter your change instructions, and click <strong>Send to Antigravity</strong>.
+                </p>
+              </div>
             </div>
           </div>
         </div>
@@ -404,9 +421,9 @@
         <div class="step-item">
           <div class="step-index">3</div>
           <div class="step-content">
-            <div class="step-title">Execute in Antigravity chat</div>
+            <div class="step-title">Antigravity Auto-Execution</div>
             <div class="step-desc">
-              In your Antigravity chat prompt, type <code style="background:#f1f5f9;padding:2px 6px;border-radius:4px;font-weight:600;">/markup</code> to review and execute pending changes:
+              Antigravity automatically detects pending items via lifecycle hook on your next message. You can also trigger execution explicitly at any time:
             </div>
             <div class="command-box">
               <code id="cmd-markup">/markup</code>
@@ -417,28 +434,57 @@
       </div>
     </section>
 
-    <!-- Commands Section -->
+    <!-- Commands & Troubleshooting Section -->
     <section class="section">
-      <h2>Commands</h2>
-      <p class="section-desc">Manage the local bridge process.</p>
+      <h2>Troubleshooting & Quick Commands</h2>
+      <p class="section-desc">Commands to fix stale caches, port conflicts, or switch active projects.</p>
 
       <div class="command-group">
         <div class="command-header">
-          <span class="command-title">Restart Server (macOS / Linux)</span>
+          <span class="command-title">Clear Stale NPX Cache & Restart (macOS / Linux)</span>
+        </div>
+        <div style="font-size:12px;color:var(--text-muted);margin-bottom:6px;">
+          Use if npx runs an older cached version or port 3005 is occupied:
         </div>
         <div class="command-box">
-          <code id="cmd-restart">lsof -ti:3005 | xargs kill -9 && npx markup-bridge@latest</code>
-          <button class="copy-btn" id="btn-copy-restart">Copy</button>
+          <code id="cmd-cache-mac">rm -rf ~/.npm/_npx/* && lsof -ti:3005 | xargs kill -9 2>/dev/null; npx -y markup-bridge@latest</code>
+          <button class="copy-btn" id="btn-copy-cache-mac">Copy</button>
         </div>
       </div>
 
       <div class="command-group">
         <div class="command-header">
-          <span class="command-title">Restart Server (Windows)</span>
+          <span class="command-title">Clear Stale Cache & Restart (Windows)</span>
+        </div>
+        <div style="font-size:12px;color:var(--text-muted);margin-bottom:6px;">
+          Clears npm cache and reclaims port 3005 on Windows:
         </div>
         <div class="command-box">
-          <code id="cmd-restart-win">npx kill-port 3005 && npx markup-bridge@latest</code>
-          <button class="copy-btn" id="btn-copy-restart-win">Copy</button>
+          <code id="cmd-cache-win">npm cache clean --force; npx -y kill-port 3005; npx -y markup-bridge@latest</code>
+          <button class="copy-btn" id="btn-copy-cache-win">Copy</button>
+        </div>
+      </div>
+
+      <div class="command-group">
+        <div class="command-header">
+          <span class="command-title">Switch Active Project Storage</span>
+        </div>
+        <div style="font-size:12px;color:var(--text-muted);margin-bottom:6px;">
+          Running in any new folder automatically switches the daemon's storage destination on-the-fly without restarting:
+        </div>
+        <div class="command-box">
+          <code id="cmd-switch">npx -y markup-bridge@latest</code>
+          <button class="copy-btn" id="btn-copy-switch">Copy</button>
+        </div>
+      </div>
+
+      <div class="command-group">
+        <div class="command-header">
+          <span class="command-title">Verify Daemon Health & Storage Path</span>
+        </div>
+        <div class="command-box">
+          <code id="cmd-health">curl -s http://127.0.0.1:3005/health</code>
+          <button class="copy-btn" id="btn-copy-health">Copy</button>
         </div>
       </div>
 
@@ -460,7 +506,7 @@
       <div class="pref-row">
         <div>
           <div class="pref-label">Floating Shortcut Pill</div>
-          <div class="pref-desc">Injects shortcut pill on all webpages (Alt+Shift+X)</div>
+          <div class="pref-desc">Injects floating inspector & clone pill on all webpages (Alt+Shift+X)</div>
         </div>
         <label class="toggle">
           <input type="checkbox" id="pref-show-pill" checked>

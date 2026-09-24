@@ -1,14 +1,14 @@
 {
   "mcpServers": {
     "markup-bridge": {
-      "command": "npx",
+      "command": "node",
       "args": [
-        "-y",
-        "markup-bridge",
+        "/Users/kabya/Desktop/markup-by-kabya/bin/markup-bridge.js",
         "mcp"
       ],
       "env": {
-        "BRIDGE_API_BASE": "http://127.0.0.1:3005"
+        "BRIDGE_API_BASE": "http://127.0.0.1:3005",
+        "MARKUP_BRIDGE_STORAGE": "/Users/kabya/Desktop/markup-by-kabya/.antigravity"
       }
     }
   }

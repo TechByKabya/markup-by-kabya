@@ -167,6 +167,54 @@ window.__INIT_MARKUP_BRIDGE__ = function () {
       color: #fff;
     }
 
+    .ag-pill-main {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .ag-pill-divider {
+      width: 1px;
+      height: 16px;
+      background: rgba(0, 0, 0, 0.12);
+      margin: 0 1px;
+    }
+
+    .ag-pill-btn {
+      background: rgba(99, 102, 241, 0.08);
+      border: 1px solid rgba(99, 102, 241, 0.22);
+      border-radius: 9999px;
+      padding: 4px 11px;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      color: #4f46e5;
+      font-size: 11.5px;
+      font-weight: 600;
+      cursor: pointer;
+      user-select: none;
+      transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+      outline: none;
+      white-space: nowrap;
+    }
+
+    .ag-pill-btn:hover {
+      background: rgba(99, 102, 241, 0.16);
+      border-color: rgba(99, 102, 241, 0.4);
+      color: #4338ca;
+      transform: translateY(-0.5px);
+    }
+
+    .ag-pill-btn:active {
+      transform: translateY(0.5px);
+    }
+
+    .ag-pill-btn.copied {
+      background: rgba(16, 185, 129, 0.12);
+      border-color: rgba(16, 185, 129, 0.35);
+      color: #059669;
+    }
+
     /* Mode Toolbar */
     .ag-toolbar {
       position: fixed;
@@ -797,20 +845,30 @@ window.__INIT_MARKUP_BRIDGE__ = function () {
     </div>
 
     <!-- Floating Pill Widget -->
-    <div class="ag-pill" id="ag-pill" title="Toggle Markup Bridge (Alt + Shift + X)">
-      <div class="ag-pill-status" id="ag-status-dot"></div>
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <circle cx="12" cy="12" r="10"></circle>
-        <line x1="22" y1="12" x2="18" y2="12"></line>
-        <line x1="6" y1="12" x2="2" y2="12"></line>
-        <line x1="12" y1="6" x2="12" y2="2"></line>
-        <line x1="12" y1="22" x2="12" y2="18"></line>
-      </svg>
-      <div class="ag-pill-label">
-        <span>Markup</span>
-        <span class="ag-pill-badge" id="ag-badge" style="display:none;">0</span>
+    <div class="ag-pill" id="ag-pill">
+      <div class="ag-pill-main" id="ag-pill-main" title="Toggle Markup Inspector (Alt + Shift + X)">
+        <div class="ag-pill-status" id="ag-status-dot"></div>
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"></circle>
+          <line x1="22" y1="12" x2="18" y2="12"></line>
+          <line x1="6" y1="12" x2="2" y2="12"></line>
+          <line x1="12" y1="6" x2="12" y2="2"></line>
+          <line x1="12" y1="22" x2="12" y2="18"></line>
+        </svg>
+        <div class="ag-pill-label">
+          <span>Markup</span>
+          <span class="ag-pill-badge" id="ag-badge" style="display:none;">0</span>
+        </div>
+        <div class="ag-pill-shortcut">Alt+Shift+X</div>
       </div>
-      <div class="ag-pill-shortcut">Alt+Shift+X</div>
+      <div class="ag-pill-divider"></div>
+      <button type="button" class="ag-pill-btn" id="ag-btn-copy-design" title="Copy Full Page Design & Instructions for Antigravity">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
+          <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
+        </svg>
+        <span id="ag-btn-copy-text">Copy Design</span>
+      </button>
       <div class="ag-pill-close" id="ag-pill-close" title="Turn Off Bridge">×</div>
     </div>
 
@@ -1539,6 +1597,138 @@ window.__INIT_MARKUP_BRIDGE__ = function () {
     } catch (_) {}
   }
 
+  // ==========================================
+  // === DESIGN SERIALIZER ENGINE (Wiring) ====
+  // ==========================================
+  //
+  // The actual serializer engine (serializePageToHTML, traverseNode, etc.) is
+  // injected at bundle build time from src/client/serializer.js by build-extension.js.
+  // In direct client.js usage (script tag / Vite plugin), the serializer.js module
+  // must be loaded before this file.
+  //
+  // Architecture: serializer.js is a pure ES module with no DOM side-effects.
+  // build-extension.js strips the `export` keywords and concatenates it before
+  // this IIFE, making all serializer functions available in the enclosing scope.
+
+  async function handleCopyDesign() {
+    const btn = shadow.getElementById('ag-btn-copy-design');
+    const label = shadow.getElementById('ag-btn-copy-text');
+    if (btn) btn.disabled = true;
+    if (label) label.textContent = '⏳ Serializing...';
+
+    showToast('🔍 Capturing full DOM — computing styles & resolving assets...', 'info', 3000);
+
+    try {
+      // ── Phase 1: Run the DOM Serializer Engine ──────────────────────────────
+      // serializePageToHTML() is defined in src/client/serializer.js and bundled
+      // into client.bundle.js at build time. It performs the full 4-layer pipeline:
+      //   Layer 1: Recursive DFS DOM traversal with noise filtering
+      //   Layer 2: getComputedStyle() extraction on every element (~25 critical props)
+      //   Layer 3: Asset URL resolution (relative → absolute, base64 inlining < 50KB)
+      //   Layer 4: HTML assembly into a clean self-contained <!DOCTYPE html> document
+      const { html, metadata } = await serializePageToHTML({
+        inlineImages: true,
+        inlineStylesheets: true,
+      });
+
+      const fileSizeKB = Math.round((metadata.byteSize || 0) / 1024);
+      if (label) label.textContent = `⬆ Uploading (${fileSizeKB} KB)...`;
+
+      // ── Phase 2: POST to /api/design-capture ──────────────────────────────
+      // The server writes the HTML to .antigravity/designs/<slug>.html atomically,
+      // then creates a feedback queue item with just the file PATH (not the HTML).
+      // This keeps the queue lightweight while giving Antigravity a file to read.
+      let serverSuccess = false;
+      let feedbackId = null;
+      let designFilePath = null;
+      let failureReason = null;
+
+      try {
+        const res = await fetch(`${BRIDGE_API_BASE}/api/design-capture`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            url: window.location.href,
+            title: document.title || 'Captured Page',
+            html,
+            metadata,
+          }),
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          feedbackId = data.id;
+          designFilePath = data.designFilePath;
+          serverSuccess = true;
+
+          if (label) label.textContent = '✓ Saved!';
+          if (btn) btn.classList.add('copied');
+          pendingCount++;
+          updateBadge();
+
+          const kbLabel = data.fileSizeBytes ? ` (${Math.round(data.fileSizeBytes / 1024)} KB)` : '';
+          showToast(
+            `✨ Full page captured${kbLabel} & queued for Antigravity! (#${(feedbackId || '').slice(-4)})`,
+            'success',
+            5000
+          );
+        } else {
+          if (res.status === 404) {
+            failureReason = 'Bridge server needs restart: /api/design-capture not found on port 3005. Run: npx markup-bridge';
+          } else if (res.status === 413) {
+            failureReason = `Page size (${fileSizeKB} KB) exceeds bridge server limit (50 MB).`;
+          } else {
+            const errData = await res.json().catch(() => ({}));
+            failureReason = errData.error || `Server error (HTTP ${res.status})`;
+          }
+        }
+      } catch (_networkErr) {
+        failureReason = 'Bridge server offline (port 3005 unreachable). Run: npx markup-bridge';
+      }
+
+      // ── Phase 3: Clipboard Fallback ────────────────────────────────────────
+      // If the server is unreachable (dev without bridge running), copy a
+      // structured prompt to clipboard so the user can paste into any AI chat.
+      if (!serverSuccess) {
+        const clipboardPrompt = [
+          `🎯 FULL PAGE CLONE REQUEST: "${metadata.pageTitle}"`,
+          `Source: ${metadata.sourceUrl}`,
+          `Captured: ${metadata.estimatedNodes} nodes | ${fileSizeKB} KB | Stack: ${(metadata.detectedStack || []).join(', ') || 'Unknown'}`,
+          ``,
+          `Notice: ${failureReason || 'Bridge server not reachable.'}`,
+          `The full serialized HTML of this page (${fileSizeKB} KB) could not be uploaded to the bridge server.`,
+          `Please ensure the Markup Bridge daemon is running (npx markup-bridge) and try again.`,
+        ].join('\n');
+
+        copyTextToClipboard(clipboardPrompt);
+        if (label) label.textContent = '⚠ Offline';
+        if (btn) btn.classList.add('copied');
+        showToast(
+          failureReason || 'Bridge server offline — hint copied to clipboard. Start the daemon and retry.',
+          'error',
+          6000
+        );
+      }
+
+      // Reset button after 3 seconds
+      setTimeout(() => {
+        if (label) label.textContent = 'Copy Design';
+        if (btn) {
+          btn.disabled = false;
+          btn.classList.remove('copied');
+        }
+      }, 3000);
+
+    } catch (err) {
+      console.error('[MarkupBridge] DOM serialization failed:', err);
+      showToast(`Serialization error: ${err.message || 'unknown error'}`, 'error');
+      if (label) label.textContent = 'Copy Design';
+      if (btn) {
+        btn.disabled = false;
+        btn.classList.remove('copied');
+      }
+    }
+  }
   function buildCurrentPayload(notes) {
     const pageContext = {
       url: window.location.href,
@@ -1797,13 +1987,21 @@ window.__INIT_MARKUP_BRIDGE__ = function () {
   window.__ANTIGRAVITY_SHUTDOWN = shutdownBridge;
 
   pill.addEventListener('click', (e) => {
-    // Don't toggle if they clicked the close button
-    if (e.target.id === 'ag-pill-close') return;
+    // Don't toggle if they clicked the close button or copy design button
+    if (e.target.closest('#ag-pill-close') || e.target.closest('#ag-btn-copy-design')) return;
     toggleActive();
   });
   
   const pillCloseBtn = shadow.getElementById('ag-pill-close');
   pillCloseBtn.addEventListener('click', shutdownBridge);
+
+  const btnCopyDesign = shadow.getElementById('ag-btn-copy-design');
+  if (btnCopyDesign) {
+    btnCopyDesign.addEventListener('click', (e) => {
+      e.stopPropagation();
+      handleCopyDesign();
+    });
+  }
 
   modalClose.addEventListener('click', closeModal);
   btnCancel.addEventListener('click', closeModal);
